@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArbiInvest - Тестовая страница</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0c0d0e;
+            color: #e3e3e3;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .info-block {
+            background: #202124;
+            border: 1px solid #2a2b2f;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .wallet-list {
+            background: #151618;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            opacity: 0.9;
+        }
+        .warning {
+            background: rgba(245, 158, 11, 0.1);
+            border: 1px solid #f59e0b;
+            color: #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        code {
+            background: #2a2b2f;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        a {
+            color: #6366f1;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦎 ArbiInvest - Информация для тестирования</h1>
+        
+        <div class="info-block">
+            <h2>📋 Инструкция по входу:</h2>
+            <ol>
+                <li>Откройте <a href="index.html" target="_blank">основной сайт</a></li>
+                <li>Дождитесь окончания приветственного текста</li>
+                <li>Нажмите "Войти в систему"</li>
+                <li>Выберите "Я рептилоид"</li>
+                <li>Введите адрес кошелька из списка ниже</li>
+                <li>Отправьте 1 PLEX токен на системный кошелек</li>
+            </ol>
+        </div>
+
+        <div class="info-block">
+            <h2>💰 Данные для транзакции:</h2>
+            <p><strong>Системный кошелек:</strong> <code>0x28915a33562b58500cf8b5b682C89A3396B8Af76</code></p>
+            <p><strong>Токен PLEX:</strong> <code>0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1</code></p>
+            <p><strong>Сумма:</strong> 1 PLEX</p>
+            <p><strong>Сеть:</strong> Binance Smart Chain (BSC)</p>
+        </div>
+
+        <div class="info-block">
+            <h2>🔑 Разрешенные кошельки (первые 10):</h2>
+            <div class="wallet-list">
+                0xb80fB15b754F08849d93Ebe591eD20dd1fe8297d<br>
+                0x45cd10D729010eB5c06F12a8060900EFCd7Ecf61<br>
+                0xB7dFfA7EEc8892947Bf7c4f6B38a12fAe8cB1ECF<br>
+                0x0376fe68647Ca26C2e62F47D5F1cc502dD1FD172<br>
+                0x25717953291f11cAaE385BAd31b01eD5160f16E5<br>
+                0x9206C33222E42cd19Fa52eF33398ef355B1B74E7<br>
+                0x39Be5358e423863f0C0E14D0aD828a4764Dc331B<br>
+                0x5Cdd115a940203A2CA256a0b94dcC815aBE19ab9<br>
+                0x9EDEecdE0CAa92354cC4B12653DCA74a74CA73d4<br>
+                0x3a5dd5BC06bF0069338c77286c4948b599Eb8FE5<br>
+                <em>... и еще 105 адресов в системе</em>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Важно:</strong> Система проверяет транзакции через BSCScan API. 
+            После отправки транзакции подождите несколько секунд для подтверждения.
+            Проверка выполняется каждые 5-10 секунд в течение 5 минут.
+        </div>
+
+        <div class="info-block">
+            <h2>🐹 Для хомяков:</h2>
+            <p>Если выберете "Я хомяк", вас перенаправят на Telegram канал:</p>
+            <p><a href="https://t.me/+bjnFt-mjdUA2NDE8" target="_blank">https://t.me/+bjnFt-mjdUA2NDE8</a></p>
+        </div>
+
+        <div class="info-block">
+            <h2>🧪 Тестовые функции:</h2>
+            <button onclick="clearAuth()">Очистить авторизацию</button>
+            <button onclick="checkAuth()">Проверить статус</button>
+            <button onclick="window.open('index.html', '_blank')">Открыть сайт</button>
+        </div>
+    </div>
+
+    <script>
+        function clearAuth() {
+            localStorage.removeItem('auth_wallet');
+            localStorage.removeItem('auth_time');
+            localStorage.removeItem('is_reptiloid');
+            alert('Авторизация очищена! Теперь при входе на сайт будет показан экран авторизации.');
+        }
+        
+        function checkAuth() {
+            const authWallet = localStorage.getItem('auth_wallet');
+            const authTime = localStorage.getItem('auth_time');
+            const isReptiloid = localStorage.getItem('is_reptiloid');
+            
+            if (authWallet && authTime && isReptiloid === 'true') {
+                const date = new Date(parseInt(authTime));
+                alert(`✅ Авторизован как рептилоид\nКошелек: ${authWallet}\nВремя входа: ${date.toLocaleString('ru-RU')}`);
+            } else {
+                alert('❌ Не авторизован');
+            }
+        }
+    </script>
+</body>
+</html>

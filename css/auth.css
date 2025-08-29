@@ -1,0 +1,593 @@
+/* ========================================
+   ArbiInvest - Стили авторизации
+   ======================================== */
+
+/* Экран авторизации */
+.auth-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #0c0d0e 0%, #151618 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.auth-container {
+    max-width: 600px;
+    width: 90%;
+    padding: var(--spacing-2xl);
+    animation: slideUp 0.6s ease-out;
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: var(--spacing-3xl);
+}
+
+.auth-header .logo-container {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.auth-header .logo-icon {
+    width: 48px;
+    height: 48px;
+    color: var(--accent-primary);
+    animation: float 3s ease-in-out infinite;
+}
+
+.auth-header .logo-text {
+    font-size: 2rem;
+    font-weight: 700;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Контент авторизации */
+.auth-content {
+    text-align: center;
+}
+
+.auth-content .typing-container {
+    margin-bottom: var(--spacing-3xl);
+    min-height: 80px;
+}
+
+.auth-content .typing-text {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+/* Кнопки выбора */
+.auth-buttons {
+    display: flex;
+    gap: var(--spacing-xl);
+    justify-content: center;
+    opacity: 0;
+}
+
+.auth-choice-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-xl) var(--spacing-2xl);
+    background: var(--bg-card);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    color: var(--text-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    min-width: 180px;
+    position: relative;
+    overflow: hidden;
+}
+
+.auth-choice-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--accent-gradient);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+}
+
+.auth-choice-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.auth-choice-btn.reptiloid:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+}
+
+.auth-choice-btn.reptiloid:hover::before {
+    opacity: 0.1;
+}
+
+.auth-choice-btn.hamster:hover {
+    border-color: var(--warning);
+    box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+}
+
+.auth-btn-icon {
+    font-size: 2.5rem;
+}
+
+/* Верификация кошелька */
+.wallet-verification {
+    max-width: 500px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.verification-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.verification-desc {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xl);
+    font-size: 1.1rem;
+}
+
+.wallet-input-group {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.wallet-input {
+    flex: 1;
+    padding: var(--spacing-md) var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: 1rem;
+    font-family: var(--font-mono);
+    transition: all var(--transition-fast);
+}
+
+.wallet-input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--bg-secondary);
+}
+
+.wallet-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+.verify-btn {
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: var(--accent-gradient);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+}
+
+.verify-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-glow);
+}
+
+.verify-btn:active {
+    transform: translateY(0);
+}
+
+/* Статус верификации */
+.verification-status {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-message {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    animation: slideUp 0.3s ease-out;
+}
+
+.status-message.error {
+    background: var(--danger-bg);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+.status-message.success {
+    background: var(--success-bg);
+    border: 1px solid var(--success);
+    color: var(--success);
+}
+
+.status-icon {
+    font-size: 1.5rem;
+}
+
+/* Инструкции по оплате */
+.payment-instructions {
+    max-width: 600px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.payment-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: var(--spacing-xl);
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.payment-info {
+    text-align: left;
+}
+
+.payment-desc {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-lg);
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+.payment-desc strong {
+    color: var(--accent-primary);
+}
+
+.system-wallet {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.system-wallet code {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+.copy-btn {
+    padding: var(--spacing-sm);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+}
+
+.copy-btn:hover {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.copy-btn.copied {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+}
+
+.token-info {
+    padding: var(--spacing-md);
+    background: var(--bg-secondary);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--spacing-xl);
+}
+
+.token-info p {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-secondary);
+}
+
+.token-address {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    word-break: break-all;
+}
+
+/* Таймер */
+.timer-container {
+    text-align: center;
+    margin: var(--spacing-2xl) 0;
+}
+
+.timer-circle {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto var(--spacing-md);
+}
+
+.timer-svg {
+    transform: rotate(-90deg);
+}
+
+.timer-bg {
+    fill: none;
+    stroke: var(--bg-hover);
+    stroke-width: 8;
+}
+
+.timer-progress {
+    fill: none;
+    stroke: var(--accent-primary);
+    stroke-width: 8;
+    stroke-linecap: round;
+    stroke-dasharray: 339.292;
+    stroke-dashoffset: 0;
+    transition: stroke-dashoffset 1s linear;
+}
+
+.timer-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.timer-desc {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* Статус транзакции */
+.transaction-status {
+    padding: var(--spacing-lg);
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
+.status-checking {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.pulse-dot {
+    width: 12px;
+    height: 12px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-success {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    color: var(--success);
+    font-size: 1.1rem;
+    font-weight: 600;
+    animation: slideUp 0.3s ease-out;
+}
+
+.success-icon {
+    font-size: 1.5rem;
+}
+
+.status-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    color: var(--danger);
+    font-size: 1.1rem;
+    animation: slideUp 0.3s ease-out;
+}
+
+.error-icon {
+    font-size: 1.5rem;
+}
+
+/* Сообщение хомяка */
+.hamster-message {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in;
+}
+
+.hamster-message .typing-container {
+    margin-bottom: var(--spacing-2xl);
+    min-height: 120px;
+}
+
+.hamster-message .typing-text {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.hamster-link {
+    opacity: 0;
+}
+
+.telegram-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-xl);
+    background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
+    border: none;
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    box-shadow: 0 4px 15px rgba(42, 171, 238, 0.3);
+}
+
+.telegram-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 25px rgba(42, 171, 238, 0.4);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .auth-container {
+        padding: var(--spacing-xl);
+    }
+    
+    .auth-content .typing-text {
+        font-size: 1.5rem;
+    }
+    
+    .auth-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .auth-choice-btn {
+        min-width: 200px;
+    }
+    
+    .wallet-input-group {
+        flex-direction: column;
+    }
+    
+    .verification-title,
+    .payment-title {
+        font-size: 1.5rem;
+    }
+    
+    .system-wallet {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .hamster-message .typing-text {
+        font-size: 1.1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .auth-header .logo-text {
+        font-size: 1.5rem;
+    }
+    
+    .auth-content .typing-text {
+        font-size: 1.25rem;
+    }
+    
+    .auth-btn-icon {
+        font-size: 2rem;
+    }
+    
+    .verification-title,
+    .payment-title {
+        font-size: 1.25rem;
+    }
+    
+    .payment-desc,
+    .verification-desc {
+        font-size: 1rem;
+    }
+    
+    .timer-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .timer-text {
+        font-size: 1.25rem;
+    }
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(0.9);
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-10px);
+    }
+}
