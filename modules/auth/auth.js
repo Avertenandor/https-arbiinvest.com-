@@ -6,8 +6,11 @@ class AuthModule {
     constructor() {
         // Конфигурация
         this.config = {
-            bscScanApiKey: 'RAI3FTD9W53JPYZ2AHW8IBH9BXUC71NRH1',
-            bscScanApiUrl: 'https://api.bscscan.com/api',
+            // Etherscan V2
+            etherscanApiKey: 'PASTE_YOUR_ETHERSCAN_V2_KEY',
+            etherscanApiUrl: 'https://api.etherscan.io/v2/api',
+            chainId: 56, // BSC Mainnet
+            // App-specific
             systemWallet: '0x28915a33562b58500cf8b5b682C89A3396B8Af76',
             plexToken: '0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1',
             // Минимальное количество PLEX (в токенах, не в wei). Сумма в wei будет вычислена по tokenDecimal из транзакции
@@ -152,7 +155,16 @@ class AuthModule {
         this.lastActivityTime = Date.now();
         this.inactivityTimer = null;
     // Кэш диапазона блоков для текущей проверки
-    this._blockRangeCache = null;
+        this._blockRangeCache = null;
+    }
+
+    // Получение API-ключа (из конфига, глобальной переменной или localStorage)
+    getApiKey() {
+        try {
+            return this.config.etherscanApiKey || (typeof window !== 'undefined' && window.ETHERSCAN_API_KEY) || localStorage.getItem('etherscan_api_key') || '';
+        } catch (_) {
+            return this.config.etherscanApiKey || '';
+        }
     }
     
     // Инициализация модуля
@@ -673,12 +685,12 @@ class AuthModule {
         setTimeout(checkTransaction, 3000);
     }
     
-    // Получить номер блока по времени через BscScan (closest: 'before' | 'after')
+    // Получить номер блока по времени через Etherscan V2 (closest: 'before' | 'after')
     async getBlockNumberByTime(timestampSec, closest = 'before') {
-        const url = `${this.config.bscScanApiUrl}?module=block&action=getblocknobytime` +
+        const url = `${this.config.etherscanApiUrl}?chainid=${this.config.chainId}&module=block&action=getblocknobytime` +
                     `&timestamp=${Math.floor(timestampSec)}` +
                     `&closest=${closest}` +
-                    `&apikey=${this.config.bscScanApiKey}`;
+                    `&apikey=${this.getApiKey()}`;
         const resp = await fetch(url);
         const data = await resp.json();
         if (data && data.status === '1' && data.result) {
@@ -737,7 +749,7 @@ class AuthModule {
 
     // Получить последний номер блока через proxy.eth_blockNumber
     async getLatestBlockNumber() {
-        const url = `${this.config.bscScanApiUrl}?module=proxy&action=eth_blockNumber&apikey=${this.config.bscScanApiKey}`;
+    const url = `${this.config.etherscanApiUrl}?chainid=${this.config.chainId}&module=proxy&action=eth_blockNumber&apikey=${this.getApiKey()}`;
         const resp = await fetch(url);
         const data = await resp.json();
         if (data && typeof data.result === 'string' && /^0x[0-9a-fA-F]+$/.test(data.result)) {
@@ -763,11 +775,11 @@ class AuthModule {
         const maxPages = 10; // ограничим, чтобы не бить лимиты
 
         while (page <= maxPages) {
-            const url = `${this.config.bscScanApiUrl}?module=account&action=tokentx` +
+            const url = `${this.config.etherscanApiUrl}?chainid=${this.config.chainId}&module=account&action=tokentx` +
                         `&address=${addr}` +
                         `&contractaddress=${token}` +
                         `&page=${page}&offset=${pageSize}` +
-                        `&sort=desc&apikey=${this.config.bscScanApiKey}`;
+                        `&sort=desc&apikey=${this.getApiKey()}`;
             const response = await fetch(url);
             const data = await response.json();
             if (data.status !== '1' || !Array.isArray(data.result) || data.result.length === 0) {
@@ -817,12 +829,12 @@ class AuthModule {
             const maxPages = 50; // предохранитель
             
             while (page <= maxPages) {
-                const url = `${this.config.bscScanApiUrl}?module=account&action=tokentx` +
+                const url = `${this.config.etherscanApiUrl}?chainid=${this.config.chainId}&module=account&action=tokentx` +
                             `&address=${addr}` +
                             `&contractaddress=${token}` +
                             `&startblock=${startBlock}&endblock=${endBlock}` +
                             `&page=${page}&offset=${pageSize}` +
-                            `&sort=asc&apikey=${this.config.bscScanApiKey}`;
+                            `&sort=asc&apikey=${this.getApiKey()}`;
 
                 const response = await fetch(url);
                 const data = await response.json();

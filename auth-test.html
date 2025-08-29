@@ -278,7 +278,7 @@
             }
         }
         
-        // Тест BSCScan API
+    // Тест Etherscan V2 API (BSC chainid=56)
         async function testBSCScanAPI() {
             const wallet = document.getElementById('test-wallet').value.trim();
             if (!wallet) {
@@ -290,13 +290,14 @@
             const output = document.getElementById('bscscan-output');
             
             try {
-                const apiKey = 'RAI3FTD9W53JPYZ2AHW8IBH9BXUC71NRH1';
+                const apiKey = (localStorage.getItem('etherscan_api_key') || 'PASTE_YOUR_ETHERSCAN_V2_KEY');
                 const plexToken = '0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1';
-                
-                const url = `https://api.bscscan.com/api?module=account&action=tokentx` +
+
+                const url = `https://api.etherscan.io/v2/api` +
+                           `?chainid=56&module=account&action=tokentx` +
                            `&address=${wallet}` +
                            `&contractaddress=${plexToken}` +
-                           `&startblock=0&endblock=999999999` +
+                           `&startblock=0&endblock=999999999&page=1&offset=100` +
                            `&sort=desc&apikey=${apiKey}`;
                 
                 const response = await fetch(url);
