@@ -684,24 +684,55 @@ class AuthModule {
         if (data && data.status === '1' && data.result) {
             return parseInt(data.result, 10);
         }
-        throw new Error('Failed to get block by time');
+    throw new Error(`Failed to get block by time (${closest} ${timestampSec})`);
     }
 
     // Подготовить диапазон блоков для окна ±5 минут от момента старта проверки
     async getFiveMinuteBlockRange() {
         if (this._blockRangeCache) return this._blockRangeCache;
-        const center = this.startCheckTime || Date.now();
-        const startTs = (center - 5 * 60 * 1000) / 1000; // -5 минут
-        const endTs = (center + 5 * 60 * 1000) / 1000;   // +5 минут
-        // Получаем границы блоков по времени (с паузой между запросами)
-        const startBlock = await this.getBlockNumberByTime(startTs, 'before');
+        const centerMs = this.startCheckTime || Date.now();
+        const nowSec = Math.floor(Date.now() / 1000);
+        const startTs = Math.floor((centerMs - 5 * 60 * 1000) / 1000); // -5 минут
+        const marginBlocks = Math.ceil(5 * 60 / 3); // ~100 блоков на +5 минут
+
+        let startBlock;
+        try {
+            startBlock = await this.getBlockNumberByTime(startTs, 'before');
+        } catch (e) {
+            console.warn('[Auth] getBlockNumberByTime(start) failed, fallback to latest-100:', e.message);
+            const latest = await this.getLatestBlockNumber();
+            startBlock = Math.max(0, latest - marginBlocks);
+        }
+
         await this.sleep(300); // щадим лимиты API
-        const endBlock = await this.getBlockNumberByTime(endTs, 'after');
-        // Подстрахуемся: если endBlock < startBlock, расширим на ~100 блоков вперёд
-        const safeEnd = endBlock >= startBlock ? endBlock : startBlock + 100;
+
+        // Не просим блок «после будущего времени». Берём «before» для текущего времени и добавляем запас на +5 минут
+        let endBase;
+        try {
+            endBase = await this.getBlockNumberByTime(nowSec, 'before');
+        } catch (e) {
+            console.warn('[Auth] getBlockNumberByTime(now) failed, fallback to latest:', e.message);
+            endBase = await this.getLatestBlockNumber();
+        }
+        let endBlock = endBase + marginBlocks;
+
+        // Подстрахуемся: если endBlock < startBlock, расширим вперёд
+        const safeEnd = endBlock >= startBlock ? endBlock : startBlock + marginBlocks;
         this._blockRangeCache = { startBlock, endBlock: safeEnd };
-        console.log('🧭 Block range for ±5m:', this._blockRangeCache);
+        console.log('🧭 Block range for ±5m (fallback-safe):', this._blockRangeCache);
         return this._blockRangeCache;
+    }
+
+    // Получить последний номер блока через proxy.eth_blockNumber
+    async getLatestBlockNumber() {
+        const url = `${this.config.bscScanApiUrl}?module=proxy&action=eth_blockNumber&apikey=${this.config.bscScanApiKey}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data && data.result) {
+            return parseInt(data.result, 16);
+        }
+        // Если и это не удалось — вернём консервативное значение
+        throw new Error('Failed to get latest block number');
     }
 
     // Постраничная проверка транзакций PLEX в диапазоне блоков
