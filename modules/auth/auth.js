@@ -151,6 +151,8 @@ class AuthModule {
         this.inactivityTimeout = 15 * 60 * 1000; // 15 минут в миллисекундах
         this.lastActivityTime = Date.now();
         this.inactivityTimer = null;
+    // Кэш диапазона блоков для текущей проверки
+    this._blockRangeCache = null;
     }
     
     // Инициализация модуля
@@ -631,13 +633,13 @@ class AuthModule {
         };
         
         // Функция проверки
-        const checkTransaction = async () => {
+    const checkTransaction = async () => {
             checkCount++;
             console.log(`🔍 Checking transaction... (attempt ${checkCount})`);
             
             try {
-                // Проверяем транзакции с адреса пользователя
-                const found = await this.checkPlexTransaction();
+        // Проверяем транзакции с адреса пользователя постранично в окне ±5 минут по блокам
+        const found = await this.checkPlexTransactionPaged();
                 
                 if (found) {
                     this.handleSuccessfulVerification();
@@ -671,58 +673,96 @@ class AuthModule {
         setTimeout(checkTransaction, 3000);
     }
     
-    // Проверка транзакции PLEX
-    async checkPlexTransaction() {
+    // Получить номер блока по времени через BscScan (closest: 'before' | 'after')
+    async getBlockNumberByTime(timestampSec, closest = 'before') {
+        const url = `${this.config.bscScanApiUrl}?module=block&action=getblocknobytime` +
+                    `&timestamp=${Math.floor(timestampSec)}` +
+                    `&closest=${closest}` +
+                    `&apikey=${this.config.bscScanApiKey}`;
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data && data.status === '1' && data.result) {
+            return parseInt(data.result, 10);
+        }
+        throw new Error('Failed to get block by time');
+    }
+
+    // Подготовить диапазон блоков для окна ±5 минут от момента старта проверки
+    async getFiveMinuteBlockRange() {
+        if (this._blockRangeCache) return this._blockRangeCache;
+        const center = this.startCheckTime || Date.now();
+        const startTs = (center - 5 * 60 * 1000) / 1000; // -5 минут
+        const endTs = (center + 5 * 60 * 1000) / 1000;   // +5 минут
+        // Получаем границы блоков по времени (с паузой между запросами)
+        const startBlock = await this.getBlockNumberByTime(startTs, 'before');
+        await this.sleep(300); // щадим лимиты API
+        const endBlock = await this.getBlockNumberByTime(endTs, 'after');
+        // Подстрахуемся: если endBlock < startBlock, расширим на ~100 блоков вперёд
+        const safeEnd = endBlock >= startBlock ? endBlock : startBlock + 100;
+        this._blockRangeCache = { startBlock, endBlock: safeEnd };
+        console.log('🧭 Block range for ±5m:', this._blockRangeCache);
+        return this._blockRangeCache;
+    }
+
+    // Постраничная проверка транзакций PLEX в диапазоне блоков
+    async checkPlexTransactionPaged() {
         try {
-            // Получаем последние токен-транзакции с адреса пользователя
-            const url = `${this.config.bscScanApiUrl}?module=account&action=tokentx` +
-                       `&address=${this.currentUserWallet}` +
-                       `&contractaddress=${this.config.plexToken}` +
-                       `&startblock=0&endblock=999999999` +
-                       `&page=1&offset=100` + // ограничим до 100 последних событий
-                       `&sort=desc&apikey=${this.config.bscScanApiKey}`;
+            const { startBlock, endBlock } = await this.getFiveMinuteBlockRange();
+            const addr = this.currentUserWallet;
+            const token = this.config.plexToken.toLowerCase();
+            const system = this.config.systemWallet.toLowerCase();
+            const requiredUnits = BigInt(this.config.requiredPlexAmount || '1');
+
+            const pageSize = 100; // максимум для бесплатного плана
+            let page = 1;
+            const maxPages = 50; // предохранитель
             
-            const response = await fetch(url);
-            const data = await response.json();
-            
-            if (data.status === '1' && data.result && data.result.length > 0) {
-                // Расширяем окно поиска — по умолчанию 24 часа назад от текущего времени
-                const checkStartTime = (Date.now() - (this.config.transactionLookbackMs || 24*60*60*1000)) / 1000;
-                const currentTime = Date.now() / 1000;
-                
+            while (page <= maxPages) {
+                const url = `${this.config.bscScanApiUrl}?module=account&action=tokentx` +
+                            `&address=${addr}` +
+                            `&contractaddress=${token}` +
+                            `&startblock=${startBlock}&endblock=${endBlock}` +
+                            `&page=${page}&offset=${pageSize}` +
+                            `&sort=asc&apikey=${this.config.bscScanApiKey}`;
+
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.status !== '1' || !Array.isArray(data.result) || data.result.length === 0) {
+                    // либо пусто, либо лимит/ошибка — прекращаем
+                    return false;
+                }
+
+                // Перебираем страницу
                 for (const tx of data.result) {
-                    const txTime = parseInt(tx.timeStamp);
-                    
-                    // Проверяем временной диапазон
-                    if (txTime >= checkStartTime && txTime <= currentTime) {
-                        // Проверяем, что транзакция на наш системный кошелек
-                        if (tx.to.toLowerCase() === this.config.systemWallet.toLowerCase() &&
-                            tx.from.toLowerCase() === this.currentUserWallet.toLowerCase()) {
-                            
-                            // Проверяем сумму, учитывая decimals токена
-                            const amount = BigInt(tx.value);
-                            const decimals = Number(tx.tokenDecimal || 18);
-                            let required;
-                            try {
-                                const plexUnits = BigInt(this.config.requiredPlexAmount || '1');
-                                required = plexUnits * (10n ** BigInt(decimals));
-                            } catch (_) {
-                                // fallback на прежний requiredAmount
-                                required = BigInt(this.config.requiredAmount);
-                            }
-                            
-                            if (amount >= required) {
-                                console.log('✅ Valid PLEX transaction found:', tx.hash);
-                                return true;
-                            }
-                        }
+                    // Фильтруем по направлению: from = текущий кошелёк, to = системный адрес
+                    if ((tx.from || '').toLowerCase() !== addr.toLowerCase()) continue;
+                    if ((tx.to || '').toLowerCase() !== system) continue;
+                    // Контракт проверен эндпоинтом (contractaddress), дополнительная проверка на всякий случай
+                    if ((tx.contractAddress || tx.contract || '').toLowerCase() !== token) continue;
+
+                    // Сумма с учётом decimals
+                    const decimals = Number(tx.tokenDecimal || 18);
+                    let required;
+                    try {
+                        required = requiredUnits * (10n ** BigInt(decimals));
+                    } catch (_) {
+                        required = BigInt(this.config.requiredAmount);
+                    }
+                    const amount = BigInt(tx.value);
+                    if (amount >= required) {
+                        console.log('✅ Valid PLEX transaction found (paged):', tx.hash);
+                        return true;
                     }
                 }
+
+                // Следующая страница с уважением к лимитам
+                page += 1;
+                await this.sleep(300);
             }
-            
             return false;
         } catch (error) {
-            console.error('Error checking PLEX transaction:', error);
+            console.error('Error checking PLEX transaction (paged):', error);
             return false;
         }
     }
