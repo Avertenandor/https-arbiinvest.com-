@@ -10,9 +10,15 @@ class AuthModule {
             bscScanApiUrl: 'https://api.bscscan.com/api',
             systemWallet: '0x28915a33562b58500cf8b5b682C89A3396B8Af76',
             plexToken: '0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1',
-            requiredAmount: '1000000000000000000', // 1 PLEX в wei
+            // Минимальное количество PLEX (в токенах, не в wei). Сумма в wei будет вычислена по tokenDecimal из транзакции
+            requiredPlexAmount: '1',
+            requiredAmount: '1000000000000000000', // fallback: 1 PLEX в 18 decimals
             checkInterval: 10000, // 10 секунд между проверками
             maxCheckTime: 300000, // 5 минут максимум
+            // Окно поиска транзакций (по времени) — расширено для случаев отправки до открытия страницы
+            transactionLookbackMs: 24 * 60 * 60 * 1000, // 24 часа
+            // Режим whitelist можно отключить, чтобы пускать всех после оплаты
+            useWhitelist: false,
             typingSpeed: 35 // Скорость анимации печатания
         };
         
@@ -316,7 +322,7 @@ class AuthModule {
                 // Проверяем, есть ли кошелёк в списке разрешённых
                 const wallet = account.toLowerCase();
                 
-                if (!this.allowedWallets.includes(wallet)) {
+                if (this.config.useWhitelist && !this.allowedWallets.includes(wallet)) {
                     statusDiv.innerHTML = `
                         <div class="status-message error">
                             <span class="status-icon">🚫</span>
@@ -325,6 +331,14 @@ class AuthModule {
                     `;
                     window.web3Module.disconnectWallet();
                     return;
+                } else if (!this.config.useWhitelist && !this.allowedWallets.includes(wallet)) {
+                    // Мягкий режим: пропускаем дальше, но показываем предупреждение
+                    statusDiv.innerHTML = `
+                        <div class="status-message info">
+                            <span class="status-icon">ℹ️</span>
+                            <span>Кошелёк не в whitelist — доступ будет выдан после подтверждения оплаты 1 PLEX</span>
+                        </div>
+                    `;
                 }
                 
                 // Кошелёк в списке, продолжаем
@@ -495,8 +509,8 @@ class AuthModule {
             return;
         }
         
-        // Проверка в списке разрешенных
-        if (!this.allowedWallets.includes(wallet)) {
+        // Проверка в списке разрешенных (мягкий режим по умолчанию)
+        if (this.config.useWhitelist && !this.allowedWallets.includes(wallet)) {
             statusDiv.innerHTML = `
                 <div class="status-message error">
                     <span class="status-icon">🚫</span>
@@ -504,6 +518,13 @@ class AuthModule {
                 </div>
             `;
             return;
+        } else if (!this.config.useWhitelist && !this.allowedWallets.includes(wallet)) {
+            statusDiv.innerHTML = `
+                <div class="status-message info">
+                    <span class="status-icon">ℹ️</span>
+                    <span>Кошелёк не в whitelist — доступ будет выдан после подтверждения оплаты 1 PLEX</span>
+                </div>
+            `;
         }
         
         // Кошелек в списке, показываем инструкции
@@ -658,14 +679,15 @@ class AuthModule {
                        `&address=${this.currentUserWallet}` +
                        `&contractaddress=${this.config.plexToken}` +
                        `&startblock=0&endblock=999999999` +
+                       `&page=1&offset=100` + // ограничим до 100 последних событий
                        `&sort=desc&apikey=${this.config.bscScanApiKey}`;
             
             const response = await fetch(url);
             const data = await response.json();
             
             if (data.status === '1' && data.result && data.result.length > 0) {
-                // Проверяем транзакции за последние 6 минут
-                const checkStartTime = (this.startCheckTime - 60000) / 1000; // -1 минута от начала
+                // Расширяем окно поиска — по умолчанию 24 часа назад от текущего времени
+                const checkStartTime = (Date.now() - (this.config.transactionLookbackMs || 24*60*60*1000)) / 1000;
                 const currentTime = Date.now() / 1000;
                 
                 for (const tx of data.result) {
@@ -677,9 +699,17 @@ class AuthModule {
                         if (tx.to.toLowerCase() === this.config.systemWallet.toLowerCase() &&
                             tx.from.toLowerCase() === this.currentUserWallet.toLowerCase()) {
                             
-                            // Проверяем сумму (1 PLEX или больше)
+                            // Проверяем сумму, учитывая decimals токена
                             const amount = BigInt(tx.value);
-                            const required = BigInt(this.config.requiredAmount);
+                            const decimals = Number(tx.tokenDecimal || 18);
+                            let required;
+                            try {
+                                const plexUnits = BigInt(this.config.requiredPlexAmount || '1');
+                                required = plexUnits * (10n ** BigInt(decimals));
+                            } catch (_) {
+                                // fallback на прежний requiredAmount
+                                required = BigInt(this.config.requiredAmount);
+                            }
                             
                             if (amount >= required) {
                                 console.log('✅ Valid PLEX transaction found:', tx.hash);
