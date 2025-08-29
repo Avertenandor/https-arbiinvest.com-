@@ -1,6 +1,6 @@
 # arbiinvest site
 
-Статический сайт проекта arbiinvest. Репозиторий: https://github.com/Avertenandor/https-arbiinvest.com-
+Статический сайт проекта arbiinvest. Репозиторий: 
 
 ## Локальный просмотр
 - Откройте `index.html` в браузере или поднимите простой сервер.

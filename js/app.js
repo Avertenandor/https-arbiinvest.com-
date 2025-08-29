@@ -196,6 +196,17 @@ class ArbiInvestApp {
                 await this.modules.transactions.init();
             }
             
+            // Инициализация секции мемпула
+            console.log('🔍 Loading Mempool Section...');
+            try {
+                const MempoolSection = (await import('../modules/mempool/mempool-section.js')).default;
+                this.modules.mempool = new MempoolSection(this);
+                await this.modules.mempool.init();
+                console.log('✅ Mempool section initialized');
+            } catch (error) {
+                console.warn('⚠️ Mempool section not loaded:', error);
+            }
+            
             // Обновляем статус подключения
             this.updateConnectionStatus('connected');
             
