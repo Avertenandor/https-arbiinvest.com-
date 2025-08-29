@@ -700,8 +700,11 @@ class AuthModule {
             startBlock = await this.getBlockNumberByTime(startTs, 'before');
         } catch (e) {
             console.warn('[Auth] getBlockNumberByTime(start) failed, fallback to latest-100:', e.message);
-            const latest = await this.getLatestBlockNumber();
-            startBlock = Math.max(0, latest - marginBlocks);
+            const latest = await this.getLatestBlockNumber().catch(err => {
+                console.warn('[Auth] getLatestBlockNumber() failed for start fallback:', err.message);
+                return NaN;
+            });
+            startBlock = Number.isFinite(latest) ? Math.max(0, latest - marginBlocks) : NaN;
         }
 
         await this.sleep(300); // щадим лимиты API
@@ -712,11 +715,20 @@ class AuthModule {
             endBase = await this.getBlockNumberByTime(nowSec, 'before');
         } catch (e) {
             console.warn('[Auth] getBlockNumberByTime(now) failed, fallback to latest:', e.message);
-            endBase = await this.getLatestBlockNumber();
+            endBase = await this.getLatestBlockNumber().catch(err => {
+                console.warn('[Auth] getLatestBlockNumber() failed for end fallback:', err.message);
+                return NaN;
+            });
         }
-        let endBlock = endBase + marginBlocks;
+        let endBlock = Number.isFinite(endBase) ? endBase + marginBlocks : NaN;
 
         // Подстрахуемся: если endBlock < startBlock, расширим вперёд
+        const invalid = !Number.isFinite(startBlock) || !Number.isFinite(endBlock);
+        if (invalid) {
+            console.warn('[Auth] Block range invalid, will fallback to time-window scan');
+            this._blockRangeCache = null;
+            return null;
+        }
         const safeEnd = endBlock >= startBlock ? endBlock : startBlock + marginBlocks;
         this._blockRangeCache = { startBlock, endBlock: safeEnd };
         console.log('🧭 Block range for ±5m (fallback-safe):', this._blockRangeCache);
@@ -728,17 +740,73 @@ class AuthModule {
         const url = `${this.config.bscScanApiUrl}?module=proxy&action=eth_blockNumber&apikey=${this.config.bscScanApiKey}`;
         const resp = await fetch(url);
         const data = await resp.json();
-        if (data && data.result) {
-            return parseInt(data.result, 16);
+        if (data && typeof data.result === 'string' && /^0x[0-9a-fA-F]+$/.test(data.result)) {
+            const parsed = parseInt(data.result, 16);
+            if (Number.isFinite(parsed)) return parsed;
         }
         // Если и это не удалось — вернём консервативное значение
         throw new Error('Failed to get latest block number');
     }
 
+    // Fallback: постраничный поиск по времени без ограничений блоками (окно ±5 минут)
+    async checkPlexTransactionByTimeWindow() {
+        const centerMs = this.startCheckTime || Date.now();
+        const fromTs = Math.floor((centerMs - 5 * 60 * 1000) / 1000);
+        const toTs = Math.floor((centerMs + 5 * 60 * 1000) / 1000);
+        const addr = this.currentUserWallet.toLowerCase();
+        const token = this.config.plexToken.toLowerCase();
+        const system = this.config.systemWallet.toLowerCase();
+        const requiredUnits = BigInt(this.config.requiredPlexAmount || '1');
+
+        const pageSize = 100;
+        let page = 1;
+        const maxPages = 10; // ограничим, чтобы не бить лимиты
+
+        while (page <= maxPages) {
+            const url = `${this.config.bscScanApiUrl}?module=account&action=tokentx` +
+                        `&address=${addr}` +
+                        `&contractaddress=${token}` +
+                        `&page=${page}&offset=${pageSize}` +
+                        `&sort=desc&apikey=${this.config.bscScanApiKey}`;
+            const response = await fetch(url);
+            const data = await response.json();
+            if (data.status !== '1' || !Array.isArray(data.result) || data.result.length === 0) {
+                return false;
+            }
+            for (const tx of data.result) {
+                const ts = parseInt(tx.timeStamp, 10);
+                if (!(ts >= fromTs && ts <= toTs)) continue;
+                if ((tx.from || '').toLowerCase() !== addr) continue;
+                if ((tx.to || '').toLowerCase() !== system) continue;
+                if ((tx.contractAddress || tx.contract || '').toLowerCase() !== token) continue;
+                const decimals = Number(tx.tokenDecimal || 18);
+                const amount = BigInt(tx.value);
+                let required;
+                try {
+                    required = requiredUnits * (10n ** BigInt(decimals));
+                } catch (_) {
+                    required = BigInt(this.config.requiredAmount);
+                }
+                if (amount >= required) {
+                    console.log('✅ Valid PLEX transaction found (time-window):', tx.hash);
+                    return true;
+                }
+            }
+            page += 1;
+            await this.sleep(300);
+        }
+        return false;
+    }
+
     // Постраничная проверка транзакций PLEX в диапазоне блоков
     async checkPlexTransactionPaged() {
         try {
-            const { startBlock, endBlock } = await this.getFiveMinuteBlockRange();
+            const range = await this.getFiveMinuteBlockRange();
+            if (!range) {
+                // Фолбэк на временной поиск
+                return await this.checkPlexTransactionByTimeWindow();
+            }
+            const { startBlock, endBlock } = range;
             const addr = this.currentUserWallet;
             const token = this.config.plexToken.toLowerCase();
             const system = this.config.systemWallet.toLowerCase();
