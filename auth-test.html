@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArbiInvest - Тест Авторизации</title>
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/auth.css">
+    
+    <style>
+        body {
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            width: 90%;
+            padding: 2rem;
+            background: rgba(26, 26, 26, 0.95);
+            border-radius: 20px;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        
+        h1 {
+            color: #fff;
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .test-section {
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+        
+        .test-section h2 {
+            color: #6366f1;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+        
+        .test-button {
+            padding: 0.75rem 1.5rem;
+            margin: 0.5rem;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .test-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        
+        .test-output {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #000;
+            border-radius: 8px;
+            color: #0f0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9rem;
+            min-height: 100px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            background: #666;
+        }
+        
+        .status-indicator.active {
+            background: #0f0;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .wallet-info {
+            padding: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 8px;
+            margin-top: 1rem;
+        }
+        
+        .wallet-info p {
+            color: #a0a0a0;
+            margin: 0.5rem 0;
+        }
+        
+        .wallet-info code {
+            color: #6366f1;
+            font-family: 'Monaco', 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Тестирование Системы Авторизации</h1>
+        
+        <!-- Тест QR-кода -->
+        <div class="test-section">
+            <h2>📱 Тест Генерации QR-кода</h2>
+            <button class="test-button" onclick="testQRCode()">Сгенерировать QR-код</button>
+            <div id="qr-test-output" style="margin-top: 1rem; text-align: center;"></div>
+        </div>
+        
+        <!-- Тест Web3 -->
+        <div class="test-section">
+            <h2>🌐 Тест Web3 Подключения</h2>
+            <button class="test-button" onclick="testWeb3Connection()">Проверить Web3</button>
+            <button class="test-button" onclick="connectMetaMask()">Подключить MetaMask</button>
+            <div id="web3-info" class="wallet-info" style="display: none;">
+                <p>Статус: <span id="web3-status">-</span></p>
+                <p>Сеть: <span id="web3-network">-</span></p>
+                <p>Аккаунт: <code id="web3-account">-</code></p>
+                <p>Баланс BNB: <span id="web3-balance">-</span></p>
+                <p>Баланс PLEX: <span id="plex-balance">-</span></p>
+            </div>
+        </div>
+        
+        <!-- Тест BSCScan API -->
+        <div class="test-section">
+            <h2>🔍 Тест BSCScan API</h2>
+            <input type="text" id="test-wallet" placeholder="Адрес кошелька" style="width: 100%; padding: 0.5rem; margin-bottom: 0.5rem; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px;">
+            <button class="test-button" onclick="testBSCScanAPI()">Проверить Транзакции</button>
+            <div id="bscscan-output" class="test-output"></div>
+        </div>
+        
+        <!-- Тест полной авторизации -->
+        <div class="test-section">
+            <h2>🚀 Тест Полной Авторизации</h2>
+            <button class="test-button" onclick="startAuthFlow()">Запустить Процесс Авторизации</button>
+            <button class="test-button" onclick="checkAuthStatus()">Проверить Статус Авторизации</button>
+            <button class="test-button" onclick="clearAuth()">Очистить Авторизацию</button>
+            <div id="auth-output" class="test-output"></div>
+        </div>
+        
+        <!-- Консоль вывода -->
+        <div class="test-section">
+            <h2>📝 Консоль</h2>
+            <button class="test-button" onclick="clearConsole()">Очистить</button>
+            <div id="console-output" class="test-output"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+    <script src="lib/qrcode.min.js"></script>
+    <script src="modules/web3/web3-integration.js"></script>
+    <script src="modules/auth/auth.js"></script>
+    
+    <script>
+        // Логирование в консоль
+        function log(message, type = 'info') {
+            const output = document.getElementById('console-output');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f00' : type === 'success' ? '#0f0' : '#fff';
+            output.innerHTML += `<div style="color: ${color}">[${time}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // Очистка консоли
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '';
+            log('Консоль очищена', 'info');
+        }
+        
+        // Тест QR-кода
+        function testQRCode() {
+            log('Тестирование генерации QR-кода...');
+            const container = document.getElementById('qr-test-output');
+            container.innerHTML = '';
+            
+            try {
+                const testAddress = '0x28915a33562b58500cf8b5b682C89A3396B8Af76';
+                
+                if (typeof QRCode !== 'undefined') {
+                    new QRCode(container, {
+                        text: testAddress,
+                        width: 200,
+                        height: 200,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.H
+                    });
+                    log('✅ QR-код успешно сгенерирован', 'success');
+                } else {
+                    log('❌ Библиотека QRCode не загружена', 'error');
+                }
+            } catch (error) {
+                log(`❌ Ошибка генерации QR-кода: ${error.message}`, 'error');
+            }
+        }
+        
+        // Тест Web3
+        async function testWeb3Connection() {
+            log('Проверка Web3...');
+            
+            if (typeof window.ethereum !== 'undefined') {
+                log('✅ MetaMask обнаружен', 'success');
+                
+                try {
+                    const web3 = new Web3(window.ethereum);
+                    const chainId = await web3.eth.getChainId();
+                    log(`Текущая сеть: Chain ID ${chainId}`);
+                    
+                    if (chainId === 56) {
+                        log('✅ Подключено к BSC Mainnet', 'success');
+                    } else {
+                        log('⚠️ Не BSC Mainnet. Переключитесь на BSC', 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Ошибка Web3: ${error.message}`, 'error');
+                }
+            } else {
+                log('❌ MetaMask не установлен', 'error');
+            }
+        }
+        
+        // Подключение MetaMask
+        async function connectMetaMask() {
+            log('Подключение к MetaMask...');
+            
+            if (!window.web3Module) {
+                window.web3Module = new Web3Module();
+            }
+            
+            try {
+                await window.web3Module.init();
+                const account = await window.web3Module.connectWallet();
+                
+                if (account) {
+                    log(`✅ Подключено: ${account}`, 'success');
+                    
+                    // Показываем информацию
+                    document.getElementById('web3-info').style.display = 'block';
+                    document.getElementById('web3-status').textContent = 'Подключено';
+                    document.getElementById('web3-status').style.color = '#0f0';
+                    document.getElementById('web3-network').textContent = 'BSC Mainnet';
+                    document.getElementById('web3-account').textContent = account;
+                    
+                    // Получаем балансы
+                    const bnbBalance = await window.web3Module.getBNBBalance(account);
+                    const plexBalance = await window.web3Module.getPLEXBalance(account);
+                    
+                    document.getElementById('web3-balance').textContent = `${parseFloat(bnbBalance).toFixed(4)} BNB`;
+                    document.getElementById('plex-balance').textContent = `${parseFloat(plexBalance).toFixed(4)} PLEX`;
+                }
+            } catch (error) {
+                log(`❌ Ошибка подключения: ${error.message}`, 'error');
+            }
+        }
+        
+        // Тест BSCScan API
+        async function testBSCScanAPI() {
+            const wallet = document.getElementById('test-wallet').value.trim();
+            if (!wallet) {
+                log('❌ Введите адрес кошелька', 'error');
+                return;
+            }
+            
+            log(`Проверка транзакций для ${wallet}...`);
+            const output = document.getElementById('bscscan-output');
+            
+            try {
+                const apiKey = 'RAI3FTD9W53JPYZ2AHW8IBH9BXUC71NRH1';
+                const plexToken = '0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1';
+                
+                const url = `https://api.bscscan.com/api?module=account&action=tokentx` +
+                           `&address=${wallet}` +
+                           `&contractaddress=${plexToken}` +
+                           `&startblock=0&endblock=999999999` +
+                           `&sort=desc&apikey=${apiKey}`;
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.status === '1' && data.result && data.result.length > 0) {
+                    output.innerHTML = `<div style="color: #0f0">✅ Найдено транзакций: ${data.result.length}</div>`;
+                    
+                    // Показываем первые 3 транзакции
+                    data.result.slice(0, 3).forEach(tx => {
+                        const date = new Date(tx.timeStamp * 1000).toLocaleString();
+                        const amount = (tx.value / 1e18).toFixed(4);
+                        const direction = tx.to.toLowerCase() === wallet.toLowerCase() ? 'Получено' : 'Отправлено';
+                        
+                        output.innerHTML += `
+                            <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,255,0,0.1); border-radius: 4px;">
+                                <div>${direction}: ${amount} PLEX</div>
+                                <div style="font-size: 0.8rem; color: #888;">Hash: ${tx.hash.substring(0, 10)}...</div>
+                                <div style="font-size: 0.8rem; color: #888;">${date}</div>
+                            </div>
+                        `;
+                    });
+                    
+                    log('✅ Данные успешно получены', 'success');
+                } else {
+                    output.innerHTML = '<div style="color: #ff0">⚠️ Транзакций PLEX не найдено</div>';
+                    log('Транзакций не найдено', 'info');
+                }
+            } catch (error) {
+                output.innerHTML = `<div style="color: #f00">❌ Ошибка: ${error.message}</div>`;
+                log(`❌ Ошибка API: ${error.message}`, 'error');
+            }
+        }
+        
+        // Запуск процесса авторизации
+        function startAuthFlow() {
+            log('Запуск процесса авторизации...');
+            
+            if (!window.authModule) {
+                window.authModule = new AuthModule();
+            }
+            
+            // Создаём временный контейнер для авторизации
+            const authScreen = document.createElement('div');
+            authScreen.id = 'auth-screen';
+            authScreen.className = 'auth-screen';
+            authScreen.innerHTML = `
+                <div class="auth-container">
+                    <div class="auth-content">
+                        <h2 style="color: #fff; margin-bottom: 2rem;">Тест Авторизации</h2>
+                        <button class="test-button" onclick="window.authModule.handleReptiloidChoice()">
+                            Начать как Рептилоид
+                        </button>
+                        <button class="test-button" onclick="window.authModule.handleHamsterChoice()">
+                            Начать как Хомяк
+                        </button>
+                        <button class="test-button" onclick="document.getElementById('auth-screen').remove()">
+                            Закрыть
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(authScreen);
+            log('✅ Экран авторизации открыт', 'success');
+        }
+        
+        // Проверка статуса авторизации
+        function checkAuthStatus() {
+            const authWallet = localStorage.getItem('auth_wallet');
+            const authTime = localStorage.getItem('auth_time');
+            const isReptiloid = localStorage.getItem('is_reptiloid');
+            
+            const output = document.getElementById('auth-output');
+            
+            if (authWallet && authTime && isReptiloid === 'true') {
+                const authDate = new Date(parseInt(authTime)).toLocaleString();
+                output.innerHTML = `
+                    <div style="color: #0f0">✅ Авторизован</div>
+                    <div>Кошелёк: ${authWallet}</div>
+                    <div>Время: ${authDate}</div>
+                    <div>Статус: Рептилоид</div>
+                `;
+                log('✅ Пользователь авторизован', 'success');
+            } else {
+                output.innerHTML = '<div style="color: #f00">❌ Не авторизован</div>';
+                log('❌ Пользователь не авторизован', 'error');
+            }
+        }
+        
+        // Очистка авторизации
+        function clearAuth() {
+            localStorage.removeItem('auth_wallet');
+            localStorage.removeItem('auth_time');
+            localStorage.removeItem('is_reptiloid');
+            localStorage.removeItem('last_activity');
+            
+            document.getElementById('auth-output').innerHTML = '<div style="color: #ff0">⚠️ Авторизация очищена</div>';
+            log('✅ Авторизация очищена', 'success');
+        }
+        
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Тестовая страница загружена', 'success');
+            log('Используйте кнопки выше для тестирования различных компонентов', 'info');
+        });
+    </script>
+</body>
+</html>

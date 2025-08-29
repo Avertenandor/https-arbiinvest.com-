@@ -1,0 +1,86 @@
+{
+  "name": "ArbiInvest - Мониторинг арбитражного робота",
+  "short_name": "ArbiInvest",
+  "description": "Отслеживайте работу арбитражного робота в режиме реального времени на Binance Smart Chain",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f0f0f",
+  "theme_color": "#0f0f0f",
+  "orientation": "any",
+  "categories": ["finance", "business", "productivity", "utilities"],
+  "lang": "ru",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/images/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/favicon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/favicon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/apple-icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/screenshot-desktop.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop view of ArbiInvest"
+    },
+    {
+      "src": "/images/screenshot-mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile view of ArbiInvest"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Панель управления",
+      "short_name": "Панель",
+      "url": "/#dashboard",
+      "icons": [{"src": "/images/dashboard-icon.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "Транзакции",
+      "short_name": "Транзакции",
+      "url": "/#transactions",
+      "icons": [{"src": "/images/transactions-icon.png", "sizes": "96x96"}]
+    },
+    {
+      "name": "Мемпул",
+      "short_name": "Мемпул",
+      "url": "/#mempool",
+      "icons": [{"src": "/images/mempool-icon.png", "sizes": "96x96"}]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

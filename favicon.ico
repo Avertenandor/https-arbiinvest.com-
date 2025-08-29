@@ -1,0 +1,10 @@
+[This would be a binary .ico file, but I'll create an HTML redirect instead]
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0; url=/images/favicon.svg">
+</head>
+<body>
+    <a href="/images/favicon.svg">Favicon</a>
+</body>
+</html>

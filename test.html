@@ -73,6 +73,17 @@
         a:hover {
             text-decoration: underline;
         }
+        .new-feature {
+            background: #10b981;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        ul {
+            text-align: left;
+            margin: 10px 0;
+        }
     </style>
 </head>
 <body>
@@ -97,6 +108,9 @@
             <p><strong>Токен PLEX:</strong> <code>0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1</code></p>
             <p><strong>Сумма:</strong> 1 PLEX</p>
             <p><strong>Сеть:</strong> Binance Smart Chain (BSC)</p>
+            <div class="new-feature">
+                <strong>✅ Новое:</strong> QR-код для удобной отправки с мобильного кошелька!
+            </div>
         </div>
 
         <div class="info-block">
@@ -117,9 +131,14 @@
         </div>
 
         <div class="warning">
-            <strong>⚠️ Важно:</strong> Система проверяет транзакции через BSCScan API. 
-            После отправки транзакции подождите несколько секунд для подтверждения.
-            Проверка выполняется каждые 5-10 секунд в течение 5 минут.
+            <strong>⚠️ Важная информация:</strong>
+            <ul>
+                <li>Система проверяет транзакции через BSCScan API</li>
+                <li>Проверка выполняется каждые 5-10 секунд в течение 5 минут</li>
+                <li><strong style="color: #ef4444;">Автоматический разлогин через 15 минут бездействия!</strong></li>
+                <li>Предупреждение появится за минуту до разлогина</li>
+                <li>QR-код генерируется для удобства оплаты с мобильных устройств</li>
+            </ul>
         </div>
 
         <div class="info-block">
@@ -132,6 +151,7 @@
             <h2>🧪 Тестовые функции:</h2>
             <button onclick="clearAuth()">Очистить авторизацию</button>
             <button onclick="checkAuth()">Проверить статус</button>
+            <button onclick="simulateInactivity()">Симулировать бездействие</button>
             <button onclick="window.open('index.html', '_blank')">Открыть сайт</button>
         </div>
     </div>
@@ -141,20 +161,36 @@
             localStorage.removeItem('auth_wallet');
             localStorage.removeItem('auth_time');
             localStorage.removeItem('is_reptiloid');
+            localStorage.removeItem('last_activity');
             alert('Авторизация очищена! Теперь при входе на сайт будет показан экран авторизации.');
         }
         
         function checkAuth() {
             const authWallet = localStorage.getItem('auth_wallet');
             const authTime = localStorage.getItem('auth_time');
+            const lastActivity = localStorage.getItem('last_activity');
             const isReptiloid = localStorage.getItem('is_reptiloid');
             
             if (authWallet && authTime && isReptiloid === 'true') {
                 const date = new Date(parseInt(authTime));
-                alert(`✅ Авторизован как рептилоид\nКошелек: ${authWallet}\nВремя входа: ${date.toLocaleString('ru-RU')}`);
+                const lastAct = new Date(parseInt(lastActivity || authTime));
+                const now = Date.now();
+                const timeSince = Math.floor((now - parseInt(lastActivity || authTime)) / 1000);
+                const remaining = Math.max(0, 900 - timeSince); // 15 минут = 900 секунд
+                const remainingMin = Math.floor(remaining / 60);
+                const remainingSec = remaining % 60;
+                
+                alert(`✅ Авторизован как рептилоид\nКошелек: ${authWallet}\nВремя входа: ${date.toLocaleString('ru-RU')}\nПоследняя активность: ${lastAct.toLocaleString('ru-RU')}\nОсталось до разлогина: ${remainingMin}:${remainingSec.toString().padStart(2, '0')}`);
             } else {
                 alert('❌ Не авторизован');
             }
+        }
+        
+        function simulateInactivity() {
+            // Устанавливаем время последней активности 14 минут назад
+            const fourteenMinutesAgo = Date.now() - (14 * 60 * 1000);
+            localStorage.setItem('last_activity', fourteenMinutesAgo.toString());
+            alert('⏱ Установлено время бездействия 14 минут. Откройте сайт и подождите 30 секунд для появления предупреждения.');
         }
     </script>
 </body>

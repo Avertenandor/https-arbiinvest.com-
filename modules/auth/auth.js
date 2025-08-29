@@ -139,11 +139,21 @@ class AuthModule {
         this.currentUserWallet = null;
         this.checkTimer = null;
         this.startCheckTime = null;
+        
+        // Таймер бездействия (15 минут)
+        this.inactivityTimeout = 15 * 60 * 1000; // 15 минут в миллисекундах
+        this.lastActivityTime = Date.now();
+        this.inactivityTimer = null;
     }
     
     // Инициализация модуля
     init() {
         console.log('🔐 Initializing Auth Module...');
+        
+        // Запускаем отслеживание активности если пользователь авторизован
+        if (this.checkExistingAuth()) {
+            this.startInactivityTimer();
+        }
     }
     
     // Показать экран выбора (хомяк или рептилоид)
@@ -221,7 +231,22 @@ class AuthModule {
         authContent.innerHTML = `
             <div class="wallet-verification">
                 <h2 class="verification-title">Верификация рептилоида</h2>
-                <p class="verification-desc">Введите адрес вашего кошелька BSC</p>
+                <p class="verification-desc">Выберите способ авторизации</p>
+                
+                <!-- Кнопка подключения MetaMask -->
+                <button id="connect-metamask-btn" class="metamask-btn">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTI5LjYgMi44TDE3LjkgMTEuNUwyMC4xIDYuMUwyOS42IDIuOFoiIGZpbGw9IiNFMjc2MjUiLz4KPHBhdGggZD0iTTIuNCAyLjhMMTQuMSAxMS42TDExLjkgNi4xTDIuNCAyLjhaIiBmaWxsPSIjRTQ3NjFCIi8+CjxwYXRoIGQ9Ik0yNS4yIDIyLjhMMjIgMjcuOEwyOC45IDI5LjdMMzAuOSAyMi45TDI1LjIgMjIuOFoiIGZpbGw9IiNFNDc2MUIiLz4KPHBhdGggZD0iTTEuMSAyMi45TDMuMSAyOS43TDEwIDI3LjhMNi44IDIyLjhMMS4xIDIyLjlaIiBmaWxsPSIjRTQ3NjFCIi8+CjxwYXRoIGQ9Ik05LjcgMTMuNUw3LjcgMTYuNUwxNC4xIDE2LjhMMTMuOSAxMC4xTDkuNyAxMy41WiIgZmlsbD0iI0U0NzYxQiIvPgo8cGF0aCBkPSJNMjIuMyAxMy41TDE4IDE5LjlMMTcuOSAxNi44TDI0LjMgMTYuNUwyMi4zIDEzLjVaIiBmaWxsPSIjRTQ3NjFCIi8+CjxwYXRoIGQ9Ik0xMCAyNy44TDEzLjggMTkuOUw5LjcgMTMuNUwxMCAyNy44WiIgZmlsbD0iI0Y2ODUxQiIvPgo8cGF0aCBkPSJNMjIuMyAxMy41TDE4LjIgMTkuOUwyMiAyNy44TDIyLjMgMTMuNVoiIGZpbGw9IiNGNjg1MUIiLz4KPC9zdmc+" 
+                         alt="MetaMask" 
+                         style="width: 24px; height: 24px;">
+                    <span>Подключить MetaMask</span>
+                </button>
+                
+                <div class="divider">
+                    <span>или</span>
+                </div>
+                
+                <!-- Ручной ввод адреса -->
+                <p class="verification-subdesc">Введите адрес вашего кошелька BSC вручную:</p>
                 <div class="wallet-input-group">
                     <input type="text" 
                            id="wallet-address" 
@@ -236,6 +261,11 @@ class AuthModule {
             </div>
         `;
         
+        // Обработчик MetaMask
+        document.getElementById('connect-metamask-btn').addEventListener('click', () => {
+            this.connectWithMetaMask();
+        });
+        
         // Обработчик проверки кошелька
         document.getElementById('verify-wallet-btn').addEventListener('click', () => {
             this.verifyWallet();
@@ -247,6 +277,204 @@ class AuthModule {
                 this.verifyWallet();
             }
         });
+    }
+    
+    // Подключение через MetaMask
+    async connectWithMetaMask() {
+        const statusDiv = document.getElementById('verification-status');
+        
+        if (!window.ethereum) {
+            statusDiv.innerHTML = `
+                <div class="status-message error">
+                    <span class="status-icon">⚠️</span>
+                    <span>MetaMask не установлен. Пожалуйста, установите расширение MetaMask</span>
+                </div>
+            `;
+            return;
+        }
+        
+        try {
+            // Показываем статус подключения
+            statusDiv.innerHTML = `
+                <div class="status-message info">
+                    <span class="status-icon">🔄</span>
+                    <span>Подключение к MetaMask...</span>
+                </div>
+            `;
+            
+            // Инициализируем Web3
+            if (!window.web3Module) {
+                window.web3Module = new Web3Module();
+            }
+            await window.web3Module.init();
+            
+            // Подключаем кошелёк
+            const account = await window.web3Module.connectWallet();
+            
+            if (account) {
+                // Проверяем, есть ли кошелёк в списке разрешённых
+                const wallet = account.toLowerCase();
+                
+                if (!this.allowedWallets.includes(wallet)) {
+                    statusDiv.innerHTML = `
+                        <div class="status-message error">
+                            <span class="status-icon">🚫</span>
+                            <span>Ваш кошелек не в списке рептилоидов</span>
+                        </div>
+                    `;
+                    window.web3Module.disconnectWallet();
+                    return;
+                }
+                
+                // Кошелёк в списке, продолжаем
+                this.currentUserWallet = wallet;
+                
+                statusDiv.innerHTML = `
+                    <div class="status-message success">
+                        <span class="status-icon">✅</span>
+                        <span>Кошелёк подключён: ${window.web3Module.formatAddress(account)}</span>
+                    </div>
+                `;
+                
+                // Показываем инструкции по оплате через 2 секунды
+                setTimeout(() => {
+                    this.showPaymentInstructionsWithMetaMask();
+                }, 2000);
+            }
+        } catch (error) {
+            console.error('MetaMask connection error:', error);
+            statusDiv.innerHTML = `
+                <div class="status-message error">
+                    <span class="status-icon">❌</span>
+                    <span>Ошибка подключения: ${error.message}</span>
+                </div>
+            `;
+        }
+    }
+    
+    // Показ инструкций с MetaMask
+    showPaymentInstructionsWithMetaMask() {
+        const authContent = document.querySelector('.auth-content');
+        
+        authContent.innerHTML = `
+            <div class="payment-instructions">
+                <h2 class="payment-title">Подтверждение доступа</h2>
+                <div class="payment-info">
+                    <p class="payment-desc">
+                        Для получения доступа отправьте <strong>1 PLEX</strong> токен на адрес системы:
+                    </p>
+                    
+                    <div class="connected-wallet">
+                        <span class="wallet-label">Ваш кошелёк:</span>
+                        <code>${window.web3Module.formatAddress(this.currentUserWallet)}</code>
+                    </div>
+                    
+                    <div class="system-wallet">
+                        <code id="system-address">${this.config.systemWallet}</code>
+                        <button class="copy-btn" onclick="window.authModule.copyAddress()">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                <rect x="5" y="5" width="9" height="9" stroke="currentColor" stroke-width="1.5" rx="1"/>
+                                <path d="M3 11V3H11" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <!-- Кнопка отправки через MetaMask -->
+                    <button id="send-with-metamask" class="send-metamask-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+PHBhdGggZD0iTTEyIDJDNi40OCAyIDIgNi40OCAyIDEyczQuNDggMTAgMTAgMTAgMTAtNC40OCAxMC0xMFMxNy41MiAyIDEyIDJ6bTEgMTVoLTJ2LTZoMnY2em0wLThoLTJWN2gydjJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+" style="width: 20px; height: 20px;">
+                        Отправить 1 PLEX через MetaMask
+                    </button>
+                    
+                    <div class="divider">
+                        <span>или отправьте вручную</span>
+                    </div>
+                    
+                    <!-- QR код для удобства -->
+                    <div class="qr-section">
+                        <h3 class="qr-title">Отсканируйте QR-код:</h3>
+                        <div class="qr-container">
+                            <div id="qr-canvas" style="background: white; padding: 10px; border-radius: 8px; display: inline-block;"></div>
+                            <p class="qr-hint">Адрес кошелька для отправки 1 PLEX</p>
+                        </div>
+                    </div>
+                    
+                    <div class="timer-container">
+                        <div class="timer-circle">
+                            <svg class="timer-svg" width="120" height="120">
+                                <circle class="timer-bg" cx="60" cy="60" r="54"/>
+                                <circle class="timer-progress" cx="60" cy="60" r="54"/>
+                            </svg>
+                            <div class="timer-text" id="timer-text">5:00</div>
+                        </div>
+                        <p class="timer-desc">Осталось времени</p>
+                    </div>
+                    <div id="transaction-status" class="transaction-status">
+                        <div class="status-checking">
+                            <div class="pulse-dot"></div>
+                            <span>Ожидание транзакции...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Генерируем QR-код
+        this.generateQRCode(this.config.systemWallet);
+        
+        // Обработчик отправки через MetaMask
+        document.getElementById('send-with-metamask').addEventListener('click', () => {
+            this.sendPLEXWithMetaMask();
+        });
+        
+        // Запускаем проверку транзакций
+        this.startTransactionCheck();
+    }
+    
+    // Отправка PLEX через MetaMask
+    async sendPLEXWithMetaMask() {
+        const statusDiv = document.getElementById('transaction-status');
+        const button = document.getElementById('send-with-metamask');
+        
+        try {
+            button.disabled = true;
+            button.innerHTML = 'Отправка...';
+            
+            statusDiv.innerHTML = `
+                <div class="status-checking">
+                    <div class="pulse-dot"></div>
+                    <span>Подтвердите транзакцию в MetaMask...</span>
+                </div>
+            `;
+            
+            // Отправляем транзакцию
+            const result = await window.web3Module.sendPLEXToken(this.config.systemWallet, '1');
+            
+            statusDiv.innerHTML = `
+                <div class="status-checking">
+                    <div class="pulse-dot"></div>
+                    <span>Ожидание подтверждения...</span>
+                </div>
+            `;
+            
+            // Ожидаем подтверждения
+            await window.web3Module.waitForTransaction(result.transactionHash, 1);
+            
+            // Успешная верификация
+            this.handleSuccessfulVerification();
+            
+        } catch (error) {
+            console.error('Error sending PLEX:', error);
+            
+            statusDiv.innerHTML = `
+                <div class="status-error">
+                    <span class="error-icon">❌</span>
+                    <span>Ошибка: ${error.message}</span>
+                </div>
+            `;
+            
+            button.disabled = false;
+            button.innerHTML = 'Отправить 1 PLEX через MetaMask';
+        }
     }
     
     // Проверка кошелька
@@ -302,9 +530,25 @@ class AuthModule {
                             </svg>
                         </button>
                     </div>
+                    
+                    <!-- QR код для удобства -->
+                    <div class="qr-section">
+                        <h3 class="qr-title">Или отсканируйте QR-код:</h3>
+                        <div class="qr-container">
+                            <div id="qr-canvas" style="background: white; padding: 10px; border-radius: 8px; display: inline-block;"></div>
+                            <p class="qr-hint">Адрес кошелька для отправки 1 PLEX</p>
+                        </div>
+                    </div>
+                    
                     <div class="token-info">
                         <p><strong>Токен PLEX:</strong></p>
                         <code class="token-address">0xdf179b6cadbc61ffd86a3d2e55f6d6e083ade6c1</code>
+                        <button class="copy-btn small" onclick="window.authModule.copyTokenAddress()">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                                <rect x="5" y="5" width="9" height="9" stroke="currentColor" stroke-width="1.5" rx="1"/>
+                                <path d="M3 11V3H11" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        </button>
                     </div>
                     <div class="timer-container">
                         <div class="timer-circle">
@@ -325,6 +569,9 @@ class AuthModule {
                 </div>
             </div>
         `;
+        
+        // Генерируем QR-код
+        this.generateQRCode(this.config.systemWallet);
         
         // Запускаем проверку транзакций
         this.startTransactionCheck();
@@ -467,6 +714,7 @@ class AuthModule {
         localStorage.setItem('auth_wallet', this.currentUserWallet);
         localStorage.setItem('auth_time', Date.now().toString());
         localStorage.setItem('is_reptiloid', 'true');
+        localStorage.setItem('last_activity', Date.now().toString());
         
         // Переход на основной сайт через 2 секунды
         setTimeout(() => {
@@ -525,22 +773,105 @@ class AuthModule {
         });
     }
     
-    // Копирование адреса
+    // Генерация QR-кода с использованием реальной библиотеки
+    generateQRCode(address) {
+        // Проверяем, загружена ли библиотека QRCode
+        if (typeof QRCode === 'undefined') {
+            // Если библиотека не загружена, загружаем её динамически
+            const script = document.createElement('script');
+            script.src = '/lib/qrcode.min.js';
+            script.onload = () => {
+                this.createQRCode(address);
+            };
+            script.onerror = () => {
+                console.error('Failed to load QRCode library');
+                // Используем альтернативный метод генерации QR-кода
+                this.createAlternativeQR(address);
+            };
+            document.head.appendChild(script);
+        } else {
+            this.createQRCode(address);
+        }
+    }
+    
+    // Создание QR-кода с использованием библиотеки
+    createQRCode(address) {
+        const qrContainer = document.getElementById('qr-canvas');
+        if (!qrContainer) return;
+        
+        // Очищаем контейнер
+        qrContainer.innerHTML = '';
+        
+        // Создаём новый QR-код
+        try {
+            new QRCode(qrContainer, {
+                text: address,
+                width: 200,
+                height: 200,
+                colorDark: '#000000',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        } catch (error) {
+            console.error('Error creating QR code:', error);
+            this.createAlternativeQR(address);
+        }
+    }
+    
+    // Альтернативный метод создания QR-кода (для резервного варианта)
+    createAlternativeQR(address) {
+        const qrContainer = document.getElementById('qr-canvas');
+        if (!qrContainer) return;
+        
+        // Используем внешний сервис для генерации QR-кода
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address)}`;
+        
+        qrContainer.innerHTML = `
+            <img src="${qrApiUrl}" 
+                 alt="QR Code" 
+                 style="display: block; width: 200px; height: 200px; background: white; padding: 10px; border-radius: 8px;"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center;\'>QR-код временно недоступен</div>'">
+        `;
+    }
+    
+    // Копирование адреса кошелька
     copyAddress() {
         const address = document.getElementById('system-address').textContent;
-        navigator.clipboard.writeText(address).then(() => {
-            const btn = event.target.closest('.copy-btn');
-            btn.classList.add('copied');
-            btn.innerHTML = '✓';
-            setTimeout(() => {
-                btn.classList.remove('copied');
-                btn.innerHTML = `
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <rect x="5" y="5" width="9" height="9" stroke="currentColor" stroke-width="1.5" rx="1"/>
-                        <path d="M3 11V3H11" stroke="currentColor" stroke-width="1.5"/>
-                    </svg>
-                `;
-            }, 2000);
+        this.copyToClipboard(address, event.target.closest('.copy-btn'));
+    }
+    
+    // Копирование адреса токена
+    copyTokenAddress() {
+        const address = this.config.plexToken;
+        this.copyToClipboard(address, event.target.closest('.copy-btn'));
+    }
+    
+    // Универсальная функция копирования
+    copyToClipboard(text, button) {
+        navigator.clipboard.writeText(text).then(() => {
+            if (button) {
+                const originalHTML = button.innerHTML;
+                button.classList.add('copied');
+                button.innerHTML = '✓';
+                setTimeout(() => {
+                    button.classList.remove('copied');
+                    button.innerHTML = originalHTML;
+                }, 2000);
+            }
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            // Fallback для старых браузеров
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (button) {
+                button.classList.add('copied');
+                setTimeout(() => button.classList.remove('copied'), 2000);
+            }
         });
     }
     
@@ -593,6 +924,9 @@ class AuthModule {
             window.app.initModules();
             window.app.startUpdates();
         }
+        
+        // Запускаем отслеживание активности
+        this.startInactivityTimer();
     }
     
     // Анимация печатания текста
@@ -642,6 +976,125 @@ class AuthModule {
         localStorage.removeItem('is_reptiloid');
         
         return false;
+    }
+    
+    // Запуск таймера бездействия
+    startInactivityTimer() {
+        // Очищаем существующий таймер
+        if (this.inactivityTimer) {
+            clearInterval(this.inactivityTimer);
+        }
+        
+        // Обновляем время последней активности
+        this.updateActivity();
+        
+        // Отслеживаем активность пользователя
+        const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+        events.forEach(event => {
+            document.addEventListener(event, () => this.updateActivity(), true);
+        });
+        
+        // Проверяем бездействие каждые 30 секунд
+        this.inactivityTimer = setInterval(() => {
+            this.checkInactivity();
+        }, 30000); // 30 секунд
+    }
+    
+    // Обновление времени последней активности
+    updateActivity() {
+        this.lastActivityTime = Date.now();
+        localStorage.setItem('last_activity', this.lastActivityTime.toString());
+    }
+    
+    // Проверка бездействия
+    checkInactivity() {
+        const now = Date.now();
+        const lastActivity = parseInt(localStorage.getItem('last_activity') || this.lastActivityTime);
+        const timeSinceActivity = now - lastActivity;
+        
+        console.log(`⏱️ Time since last activity: ${Math.floor(timeSinceActivity / 1000)}s`);
+        
+        // Если прошло больше 15 минут
+        if (timeSinceActivity > this.inactivityTimeout) {
+            console.log('⚠️ Inactivity timeout reached. Logging out...');
+            this.handleInactivityLogout();
+        } else if (timeSinceActivity > this.inactivityTimeout - 60000) {
+            // Предупреждение за минуту до разлогина
+            const remainingSeconds = Math.floor((this.inactivityTimeout - timeSinceActivity) / 1000);
+            this.showInactivityWarning(remainingSeconds);
+        }
+    }
+    
+    // Показать предупреждение о бездействии
+    showInactivityWarning(remainingSeconds) {
+        // Проверяем, не показано ли уже предупреждение
+        if (document.getElementById('inactivity-warning')) return;
+        
+        const warning = document.createElement('div');
+        warning.id = 'inactivity-warning';
+        warning.className = 'inactivity-warning';
+        warning.innerHTML = `
+            <div class="warning-content">
+                <span class="warning-icon">⚠️</span>
+                <span class="warning-text">Вы будете отключены через <strong>${remainingSeconds}</strong> секунд из-за бездействия</span>
+                <button class="warning-btn" onclick="window.authModule.extendSession()">Продолжить работу</button>
+            </div>
+        `;
+        
+        document.body.appendChild(warning);
+        
+        // Удаляем предупреждение через 10 секунд
+        setTimeout(() => {
+            if (warning && warning.parentNode) {
+                warning.remove();
+            }
+        }, 10000);
+    }
+    
+    // Продление сессии
+    extendSession() {
+        console.log('✅ Session extended');
+        this.updateActivity();
+        
+        // Удаляем предупреждение
+        const warning = document.getElementById('inactivity-warning');
+        if (warning) {
+            warning.remove();
+        }
+        
+        // Показываем уведомление
+        if (window.app && window.app.showNotification) {
+            window.app.showNotification('success', 'Сессия продлена', 2000);
+        }
+    }
+    
+    // Обработка разлогина из-за бездействия
+    handleInactivityLogout() {
+        // Очищаем таймер
+        if (this.inactivityTimer) {
+            clearInterval(this.inactivityTimer);
+        }
+        
+        // Очищаем авторизацию
+        localStorage.removeItem('auth_wallet');
+        localStorage.removeItem('auth_time');
+        localStorage.removeItem('is_reptiloid');
+        localStorage.removeItem('last_activity');
+        
+        // Показываем сообщение
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `
+                <div class="logout-screen">
+                    <div class="logout-container">
+                        <div class="logout-icon">🔒</div>
+                        <h2 class="logout-title">Сессия завершена</h2>
+                        <p class="logout-message">Вы были отключены из-за 15 минут бездействия</p>
+                        <button class="logout-btn" onclick="location.reload()">Войти снова</button>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ArbiInvest OG Image</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 1200px;
+            height: 630px;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+        .grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                linear-gradient(rgba(99, 102, 241, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99, 102, 241, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 10s linear infinite;
+        }
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        .content {
+            text-align: center;
+            z-index: 10;
+            position: relative;
+        }
+        .logo {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto 30px;
+            position: relative;
+        }
+        .logo-bg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+        .logo svg {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(99, 102, 241, 0.5);
+        }
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 24px;
+            margin-bottom: 40px;
+        }
+        .features {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        .feature {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 12px;
+            padding: 20px 30px;
+            backdrop-filter: blur(10px);
+        }
+        .feature-value {
+            color: #6366f1;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .feature-label {
+            color: #888;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .badge {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: linear-gradient(135deg, #10b981, #6366f1);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.3);
+        }
+        .decorative-circles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            overflow: hidden;
+        }
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            animation: float 20s infinite ease-in-out;
+        }
+        .circle:nth-child(1) {
+            width: 300px;
+            height: 300px;
+            top: -150px;
+            left: -150px;
+            animation-delay: 0s;
+        }
+        .circle:nth-child(2) {
+            width: 200px;
+            height: 200px;
+            bottom: -100px;
+            right: -100px;
+            animation-delay: 5s;
+        }
+        .circle:nth-child(3) {
+            width: 150px;
+            height: 150px;
+            top: 50%;
+            right: 10%;
+            animation-delay: 10s;
+        }
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -30px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+    </style>
+</head>
+<body>
+    <div class="decorative-circles">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    <div class="grid"></div>
+    <div class="badge">LIVE</div>
+    <div class="content">
+        <div class="logo">
+            <div class="logo-bg"></div>
+            <svg viewBox="0 0 120 120" fill="none">
+                <circle cx="60" cy="60" r="55" stroke="url(#gradient)" stroke-width="3" opacity="0.3"/>
+                <circle cx="60" cy="60" r="45" stroke="url(#gradient)" stroke-width="2" opacity="0.5"/>
+                <circle cx="60" cy="60" r="35" stroke="url(#gradient)" stroke-width="1" opacity="0.7"/>
+                <path d="M60 30 L60 90 M30 60 L90 60" stroke="url(#gradient)" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="60" cy="60" r="12" fill="url(#gradient)"/>
+                <circle cx="60" cy="35" r="5" fill="#10b981" opacity="0.8"/>
+                <circle cx="85" cy="60" r="5" fill="#10b981" opacity="0.8"/>
+                <circle cx="60" cy="85" r="5" fill="#10b981" opacity="0.8"/>
+                <circle cx="35" cy="60" r="5" fill="#10b981" opacity="0.8"/>
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1"/>
+                        <stop offset="100%" style="stop-color:#8b5cf6"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        <h1>ArbiInvest</h1>
+        <p class="subtitle">Мониторинг арбитражного робота в реальном времени</p>
+        <div class="features">
+            <div class="feature">
+                <div class="feature-value">87.3%</div>
+                <div class="feature-label">Успешность</div>
+            </div>
+            <div class="feature">
+                <div class="feature-value">24/7</div>
+                <div class="feature-label">Мониторинг</div>
+            </div>
+            <div class="feature">
+                <div class="feature-value">BSC</div>
+                <div class="feature-label">Блокчейн</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

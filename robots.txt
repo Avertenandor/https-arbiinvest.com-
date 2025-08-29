@@ -1,0 +1,80 @@
+# Robots.txt для ArbiInvest
+# Оптимизирован для Яндекс и Google
+
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /.git/
+Disallow: /test/
+Crawl-delay: 1
+
+# Яндекс
+User-agent: Yandex
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Clean-param: utm_source&utm_medium&utm_campaign&utm_term&utm_content&from
+Host: arbiinvest.com
+Crawl-delay: 1
+
+# Google
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Crawl-delay: 0
+
+# Bing
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Crawl-delay: 1
+
+# Mail.ru
+User-agent: Mail.RU_Bot
+Allow: /
+Disallow: /api/
+Crawl-delay: 2
+
+# VK
+User-agent: vkShare
+Allow: /
+Crawl-delay: 0
+
+# Telegram
+User-agent: TelegramBot
+Allow: /
+Crawl-delay: 0
+
+# WhatsApp
+User-agent: WhatsApp
+Allow: /
+Crawl-delay: 0
+
+# Facebook
+User-agent: facebookexternalhit
+Allow: /
+Crawl-delay: 0
+
+# Twitter
+User-agent: Twitterbot
+Allow: /
+Crawl-delay: 0
+
+# Запрещаем плохих ботов
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+# Карта сайта
+Sitemap: https://arbiinvest.com/sitemap.xml

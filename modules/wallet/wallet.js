@@ -2,488 +2,341 @@
 // ArbiInvest - Модуль кошелька
 // ========================================
 
-export class WalletModule {
+class WalletModule {
     constructor(app) {
         this.app = app;
-        this.address = null;
+        this.walletAddress = null;
         this.balance = 0;
-        this.network = null;
-        this.provider = null;
-        this.isConnecting = false;
+        this.tokens = [];
+        this.updateInterval = null;
+        this.bscApiKey = 'RAI3FTD9W53JPYZ2AHW8IBH9BXUC71NRH1';
+        this.bscApiUrl = 'https://api.bscscan.com/api';
     }
     
     // Инициализация модуля
     async init() {
-        // Проверяем наличие Web3
-        if (!this.isWeb3Available()) {
-            console.log('Web3 не доступен');
-            return;
+        console.log('💼 Инициализация Wallet модуля...');
+        this.walletAddress = localStorage.getItem('robot_wallet') || null;
+        
+        if (this.walletAddress) {
+            await this.loadWalletData();
         }
         
-        // Подключаем обработчики событий
         this.bindEvents();
-        
-        // Проверяем сохраненное подключение
-        await this.checkSavedConnection();
+        this.startUpdates();
+        return true;
     }
     
-    // Проверка доступности Web3
-    isWeb3Available() {
-        return typeof window.ethereum !== 'undefined';
-    }
-    
-    // Проверка сохраненного подключения
-    async checkSavedConnection() {
-        const savedAddress = this.app.storage.get('walletAddress');
-        
-        if (savedAddress && this.isWeb3Available()) {
-            try {
-                const accounts = await window.ethereum.request({
-                    method: 'eth_accounts'
-                });
-                
-                if (accounts.length > 0 && accounts[0].toLowerCase() === savedAddress.toLowerCase()) {
-                    await this.onConnect(accounts[0]);
-                }
-            } catch (error) {
-                console.error('Ошибка проверки подключения:', error);
-            }
-        }
-    }
-    
-    // Обработка подключения кошелька
-    async handleConnect() {
-        if (this.isConnecting) return;
-        
-        if (!this.isWeb3Available()) {
-            this.showInstallPrompt();
-            return;
-        }
-        
-        if (this.address) {
-            this.showAccountModal();
-            return;
-        }
-        
-        this.isConnecting = true;
-        
+    // Загрузка данных кошелька
+    async loadWalletData() {
         try {
-            // Запрашиваем доступ к аккаунтам
-            const accounts = await window.ethereum.request({
-                method: 'eth_requestAccounts'
-            });
+            // Получаем баланс BNB
+            await this.updateBalance();
             
-            if (accounts.length > 0) {
-                await this.onConnect(accounts[0]);
-            }
+            // Получаем токены
+            await this.loadTokens();
+            
+            // Обновляем интерфейс
+            this.updateUI();
+            
         } catch (error) {
-            if (error.code === 4001) {
-                this.app.notifications.warning('Подключение отменено');
-            } else {
-                this.app.notifications.error('Ошибка подключения кошелька');
-                console.error('Ошибка подключения:', error);
-            }
-        } finally {
-            this.isConnecting = false;
-        }
-    }
-    
-    // Обработка успешного подключения
-    async onConnect(address) {
-        this.address = address;
-        this.app.state.isWalletConnected = true;
-        this.app.state.walletAddress = address;
-        
-        // Сохраняем адрес
-        this.app.storage.set('walletAddress', address);
-        
-        // Получаем сеть
-        await this.updateNetwork();
-        
-        // Получаем баланс
-        await this.updateBalance();
-        
-        // Обновляем UI
-        this.updateUI();
-        
-        // Показываем уведомление
-        this.app.notifications.success(
-            `Кошелек подключен: ${this.app.utils.formatAddress(address)}`
-        );
-        
-        // Запускаем мониторинг
-        this.startMonitoring();
-    }
-    
-    // Отключение кошелька
-    async disconnect() {
-        this.address = null;
-        this.balance = 0;
-        this.network = null;
-        
-        this.app.state.isWalletConnected = false;
-        this.app.state.walletAddress = null;
-        
-        // Удаляем из хранилища
-        this.app.storage.remove('walletAddress');
-        
-        // Останавливаем мониторинг
-        this.stopMonitoring();
-        
-        // Обновляем UI
-        this.updateUI();
-        
-        // Показываем уведомление
-        this.app.notifications.info('Кошелек отключен');
-    }
-    
-    // Обновление сети
-    async updateNetwork() {
-        if (!this.isWeb3Available()) return;
-        
-        try {
-            const chainId = await window.ethereum.request({
-                method: 'eth_chainId'
-            });
-            
-            const networkId = parseInt(chainId, 16);
-            this.network = this.app.config.NETWORKS[networkId] || {
-                name: 'Unknown Network',
-                symbol: 'ETH'
-            };
-            
-            this.app.state.networkId = networkId;
-            this.app.storage.set('networkId', networkId);
-        } catch (error) {
-            console.error('Ошибка получения сети:', error);
+            console.error('Ошибка загрузки данных кошелька:', error);
         }
     }
     
     // Обновление баланса
     async updateBalance() {
-        if (!this.address || !this.isWeb3Available()) return;
+        if (!this.walletAddress) return;
         
         try {
-            const balance = await window.ethereum.request({
-                method: 'eth_getBalance',
-                params: [this.address, 'latest']
-            });
+            const response = await fetch(`${this.bscApiUrl}?module=account&action=balance&address=${this.walletAddress}&apikey=${this.bscApiKey}`);
+            const data = await response.json();
             
-            this.balance = parseInt(balance, 16);
-            
-            // Обновляем отображение баланса
-            this.updateBalanceDisplay();
+            if (data.status === '1') {
+                this.balance = parseFloat(data.result) / 1e18; // Wei to BNB
+                this.updateBalanceDisplay();
+            }
         } catch (error) {
-            console.error('Ошибка получения баланса:', error);
+            console.error('Ошибка обновления баланса:', error);
         }
     }
     
-    // Переключение сети
-    async switchNetwork(chainId) {
-        if (!this.isWeb3Available()) return;
+    // Загрузка токенов
+    async loadTokens() {
+        if (!this.walletAddress) return;
         
         try {
-            await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: '0x' + chainId.toString(16) }]
-            });
-        } catch (error) {
-            if (error.code === 4902) {
-                // Сеть не добавлена
-                await this.addNetwork(chainId);
-            } else {
-                console.error('Ошибка переключения сети:', error);
-                this.app.notifications.error('Не удалось переключить сеть');
-            }
-        }
-    }
-    
-    // Добавление сети
-    async addNetwork(chainId) {
-        const network = this.app.config.NETWORKS[chainId];
-        if (!network) return;
-        
-        try {
-            await window.ethereum.request({
-                method: 'wallet_addEthereumChain',
-                params: [{
-                    chainId: '0x' + chainId.toString(16),
-                    chainName: network.name,
-                    nativeCurrency: {
-                        name: network.symbol,
-                        symbol: network.symbol,
-                        decimals: network.decimals
-                    },
-                    rpcUrls: [network.rpc],
-                    blockExplorerUrls: [network.explorer]
-                }]
-            });
-        } catch (error) {
-            console.error('Ошибка добавления сети:', error);
-            this.app.notifications.error('Не удалось добавить сеть');
-        }
-    }
-    
-    // Отправка транзакции
-    async sendTransaction(params) {
-        if (!this.address || !this.isWeb3Available()) {
-            this.app.notifications.error('Кошелек не подключен');
-            return null;
-        }
-        
-        try {
-            const txHash = await window.ethereum.request({
-                method: 'eth_sendTransaction',
-                params: [params]
-            });
+            // Получаем список токенов BEP-20
+            const response = await fetch(`${this.bscApiUrl}?module=account&action=tokentx&address=${this.walletAddress}&startblock=0&endblock=99999999&sort=desc&apikey=${this.bscApiKey}`);
+            const data = await response.json();
             
-            // Показываем уведомление
-            const notificationId = this.app.notifications.showTransaction('pending', txHash);
-            
-            // Ждем подтверждения
-            this.waitForTransaction(txHash, notificationId);
-            
-            return txHash;
-        } catch (error) {
-            if (error.code === 4001) {
-                this.app.notifications.warning('Транзакция отменена');
-            } else {
-                this.app.notifications.error('Ошибка отправки транзакции');
-                console.error('Ошибка транзакции:', error);
-            }
-            return null;
-        }
-    }
-    
-    // Ожидание подтверждения транзакции
-    async waitForTransaction(txHash, notificationId) {
-        try {
-            const receipt = await this.waitForReceipt(txHash);
-            
-            // Скрываем уведомление о pending
-            if (notificationId) {
-                this.app.notifications.hide(notificationId);
-            }
-            
-            if (receipt.status === '0x1') {
-                this.app.notifications.showTransaction('success', txHash, 'Транзакция успешно выполнена');
-            } else {
-                this.app.notifications.showTransaction('failed', txHash, 'Транзакция отклонена');
-            }
-            
-            // Обновляем баланс
-            await this.updateBalance();
-        } catch (error) {
-            console.error('Ошибка ожидания транзакции:', error);
-        }
-    }
-    
-    // Ожидание чека транзакции
-    async waitForReceipt(txHash, maxAttempts = 30) {
-        for (let i = 0; i < maxAttempts; i++) {
-            try {
-                const receipt = await window.ethereum.request({
-                    method: 'eth_getTransactionReceipt',
-                    params: [txHash]
+            if (data.status === '1' && data.result) {
+                // Группируем токены по контрактам
+                const tokenMap = new Map();
+                
+                data.result.forEach(tx => {
+                    if (!tokenMap.has(tx.contractAddress)) {
+                        tokenMap.set(tx.contractAddress, {
+                            address: tx.contractAddress,
+                            symbol: tx.tokenSymbol,
+                            name: tx.tokenName,
+                            decimals: parseInt(tx.tokenDecimal),
+                            balance: 0
+                        });
+                    }
                 });
                 
-                if (receipt) {
-                    return receipt;
-                }
-            } catch (error) {
-                console.error('Ошибка получения чека:', error);
+                this.tokens = Array.from(tokenMap.values());
+                
+                // Получаем балансы токенов
+                await this.updateTokenBalances();
             }
-            
-            // Ждем 2 секунды перед следующей попыткой
-            await this.app.utils.sleep(2000);
-        }
-        
-        throw new Error('Превышено время ожидания транзакции');
-    }
-    
-    // Подпись сообщения
-    async signMessage(message) {
-        if (!this.address || !this.isWeb3Available()) {
-            this.app.notifications.error('Кошелек не подключен');
-            return null;
-        }
-        
-        try {
-            const signature = await window.ethereum.request({
-                method: 'personal_sign',
-                params: [message, this.address]
-            });
-            
-            return signature;
         } catch (error) {
-            if (error.code === 4001) {
-                this.app.notifications.warning('Подпись отменена');
-            } else {
-                this.app.notifications.error('Ошибка подписи сообщения');
-                console.error('Ошибка подписи:', error);
-            }
-            return null;
+            console.error('Ошибка загрузки токенов:', error);
         }
     }
     
-    // Запуск мониторинга
-    startMonitoring() {
-        // Обновляем баланс каждые 10 секунд
-        this.balanceInterval = setInterval(() => {
-            this.updateBalance();
-        }, 10000);
-        
-        // Слушаем события
-        if (window.ethereum) {
-            window.ethereum.on('accountsChanged', this.handleAccountsChanged.bind(this));
-            window.ethereum.on('chainChanged', this.handleChainChanged.bind(this));
-        }
-    }
-    
-    // Остановка мониторинга
-    stopMonitoring() {
-        if (this.balanceInterval) {
-            clearInterval(this.balanceInterval);
-        }
-        
-        // Удаляем слушатели
-        if (window.ethereum) {
-            window.ethereum.removeListener('accountsChanged', this.handleAccountsChanged);
-            window.ethereum.removeListener('chainChanged', this.handleChainChanged);
-        }
-    }
-    
-    // Обработка изменения аккаунтов
-    async handleAccountsChanged(accounts) {
-        if (accounts.length === 0) {
-            await this.disconnect();
-        } else if (accounts[0] !== this.address) {
-            await this.onConnect(accounts[0]);
-        }
-    }
-    
-    // Обработка изменения сети
-    async handleChainChanged(chainId) {
-        await this.updateNetwork();
-        await this.updateBalance();
-        this.updateUI();
-    }
-    
-    // Привязка событий
-    bindEvents() {
-        // События MetaMask уже обрабатываются в startMonitoring
-    }
-    
-    // Обновление UI
-    updateUI() {
-        const walletBtn = document.getElementById('walletBtn');
-        if (!walletBtn) return;
-        
-        const btnText = walletBtn.querySelector('.wallet-btn__text');
-        
-        if (this.address) {
-            walletBtn.classList.add('connected');
-            if (btnText) {
-                btnText.textContent = this.app.utils.formatAddress(this.address);
-            }
-        } else {
-            walletBtn.classList.remove('connected');
-            if (btnText) {
-                btnText.textContent = 'Подключить кошелек';
-            }
-        }
-        
-        // Обновляем отображение сети
-        this.updateNetworkDisplay();
+    // Обновление балансов токенов
+    async updateTokenBalances() {
+        // Здесь должна быть логика получения балансов токенов
+        // Для примера используем моковые данные
+        this.tokens = this.tokens.slice(0, 5).map(token => ({
+            ...token,
+            balance: Math.random() * 1000,
+            value: Math.random() * 1000
+        }));
     }
     
     // Обновление отображения баланса
     updateBalanceDisplay() {
-        const elements = document.querySelectorAll('.wallet-balance');
-        elements.forEach(el => {
-            el.textContent = this.app.utils.formatETH(this.balance) + ' ' + (this.network?.symbol || 'ETH');
+        const balanceElements = document.querySelectorAll('[data-wallet-balance]');
+        balanceElements.forEach(el => {
+            el.textContent = this.balance.toFixed(4);
+        });
+        
+        // Обновляем USD эквивалент (примерная цена BNB)
+        const bnbPrice = 250; // Примерная цена
+        const usdValue = this.balance * bnbPrice;
+        
+        const usdElements = document.querySelectorAll('[data-wallet-usd]');
+        usdElements.forEach(el => {
+            el.textContent = `≈ $${usdValue.toFixed(2)}`;
         });
     }
     
-    // Обновление отображения сети
-    updateNetworkDisplay() {
-        const elements = document.querySelectorAll('.network-name');
-        elements.forEach(el => {
-            el.textContent = this.network?.name || 'Unknown';
-        });
+    // Обновление UI
+    updateUI() {
+        const walletSection = document.getElementById('wallet');
+        if (!walletSection) return;
         
-        const indicators = document.querySelectorAll('.network-indicator');
-        indicators.forEach(el => {
-            el.className = 'network-indicator';
-            if (this.network) {
-                el.classList.add('network-' + this.app.state.networkId);
+        if (!this.walletAddress) {
+            walletSection.innerHTML = this.renderConnectWallet();
+        } else {
+            walletSection.innerHTML = this.renderWalletInfo();
+        }
+    }
+    
+    // Рендер подключения кошелька
+    renderConnectWallet() {
+        return `
+            <div class="wallet-connect">
+                <div class="connect-icon">💼</div>
+                <h2>Подключите кошелек робота</h2>
+                <p>Введите адрес кошелька арбитражного робота для мониторинга</p>
+                <div class="connect-form">
+                    <input type="text" 
+                           id="wallet-input" 
+                           class="wallet-input" 
+                           placeholder="0x..." 
+                           maxlength="42">
+                    <button class="btn btn-primary" onclick="window.walletModule.connectWallet()">
+                        Подключить
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Рендер информации о кошельке
+    renderWalletInfo() {
+        return `
+            <div class="wallet-info">
+                <div class="wallet-header">
+                    <h2>Кошелек робота</h2>
+                    <button class="btn btn-secondary" onclick="window.walletModule.disconnectWallet()">
+                        Отключить
+                    </button>
+                </div>
+                
+                <div class="wallet-address">
+                    <span class="label">Адрес:</span>
+                    <span class="address">${this.formatAddress(this.walletAddress)}</span>
+                    <button class="copy-btn" onclick="window.walletModule.copyAddress()">
+                        📋
+                    </button>
+                </div>
+                
+                <div class="wallet-balance">
+                    <div class="balance-card">
+                        <div class="balance-label">Баланс BNB</div>
+                        <div class="balance-value">
+                            <span data-wallet-balance>${this.balance.toFixed(4)}</span> BNB
+                        </div>
+                        <div class="balance-usd" data-wallet-usd>≈ $${(this.balance * 250).toFixed(2)}</div>
+                    </div>
+                </div>
+                
+                <div class="wallet-tokens">
+                    <h3>Токены</h3>
+                    <div class="tokens-list">
+                        ${this.renderTokensList()}
+                    </div>
+                </div>
+                
+                <div class="wallet-actions">
+                    <button class="btn btn-primary" onclick="window.walletModule.refresh()">
+                        Обновить
+                    </button>
+                    <a href="https://bscscan.com/address/${this.walletAddress}" 
+                       target="_blank" 
+                       class="btn btn-secondary">
+                        Открыть в BSCScan
+                    </a>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Рендер списка токенов
+    renderTokensList() {
+        if (this.tokens.length === 0) {
+            return '<div class="no-tokens">Нет токенов</div>';
+        }
+        
+        return this.tokens.map(token => `
+            <div class="token-item">
+                <div class="token-info">
+                    <div class="token-symbol">${token.symbol}</div>
+                    <div class="token-name">${token.name}</div>
+                </div>
+                <div class="token-balance">
+                    <div class="token-amount">${token.balance?.toFixed(2) || '0'}</div>
+                    <div class="token-value">≈ $${token.value?.toFixed(2) || '0'}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Подключение кошелька
+    async connectWallet() {
+        const input = document.getElementById('wallet-input');
+        if (!input) return;
+        
+        const address = input.value.trim();
+        
+        // Проверка валидности адреса
+        if (!this.isValidAddress(address)) {
+            if (window.app && window.app.showNotification) {
+                window.app.showNotification('error', 'Неверный формат адреса');
+            }
+            return;
+        }
+        
+        // Сохраняем адрес
+        this.walletAddress = address;
+        localStorage.setItem('robot_wallet', address);
+        
+        // Загружаем данные
+        await this.loadWalletData();
+        
+        if (window.app && window.app.showNotification) {
+            window.app.showNotification('success', 'Кошелек подключен');
+        }
+    }
+    
+    // Отключение кошелька
+    disconnectWallet() {
+        this.walletAddress = null;
+        this.balance = 0;
+        this.tokens = [];
+        
+        localStorage.removeItem('robot_wallet');
+        
+        this.updateUI();
+        
+        if (window.app && window.app.showNotification) {
+            window.app.showNotification('info', 'Кошелек отключен');
+        }
+    }
+    
+    // Копирование адреса
+    copyAddress() {
+        if (!this.walletAddress) return;
+        
+        navigator.clipboard.writeText(this.walletAddress).then(() => {
+            if (window.app && window.app.showNotification) {
+                window.app.showNotification('success', 'Адрес скопирован');
             }
         });
     }
     
-    // Показ модального окна установки
-    showInstallPrompt() {
-        const modal = `
-            <div class="modal-content">
-                <h3>Установите MetaMask</h3>
-                <p>Для работы с ArbiInvest необходим кошелек MetaMask.</p>
-                <div class="modal-actions">
-                    <a href="https://metamask.io/download/" target="_blank" class="btn btn-primary">
-                        Установить MetaMask
-                    </a>
-                </div>
-            </div>
-        `;
-        
-        this.app.showModal(modal);
+    // Проверка валидности адреса
+    isValidAddress(address) {
+        return /^0x[a-fA-F0-9]{40}$/.test(address);
     }
     
-    // Показ модального окна аккаунта
-    showAccountModal() {
-        const modal = `
-            <div class="modal-content">
-                <h3>Кошелек</h3>
-                <div class="account-info">
-                    <div class="account-address">
-                        <label>Адрес:</label>
-                        <div class="address-display">
-                            <span>${this.address}</span>
-                            <button class="copy-btn" data-copy="${this.address}">📋</button>
-                        </div>
-                    </div>
-                    <div class="account-balance">
-                        <label>Баланс:</label>
-                        <span>${this.app.utils.formatETH(this.balance)} ${this.network?.symbol || 'ETH'}</span>
-                    </div>
-                    <div class="account-network">
-                        <label>Сеть:</label>
-                        <span>${this.network?.name || 'Unknown'}</span>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="window.ArbiInvest.modules.wallet.disconnect()">
-                        Отключить
-                    </button>
-                    <a href="${this.network?.explorer}/address/${this.address}" target="_blank" class="btn btn-primary">
-                        Открыть в Explorer
-                    </a>
-                </div>
-            </div>
-        `;
-        
-        this.app.showModal(modal);
+    // Форматирование адреса
+    formatAddress(address) {
+        if (!address) return '';
+        return `${address.slice(0, 6)}...${address.slice(-4)}`;
     }
     
-    // Рендеринг модуля (не используется для wallet)
-    async render() {
-        return '';
+    // Обновление данных
+    async refresh() {
+        await this.loadWalletData();
+        
+        if (window.app && window.app.showNotification) {
+            window.app.showNotification('success', 'Данные кошелька обновлены');
+        }
+    }
+    
+    // Привязка событий
+    bindEvents() {
+        // Обработка ввода адреса при нажатии Enter
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const input = document.getElementById('wallet-input');
+                if (input && document.activeElement === input) {
+                    this.connectWallet();
+                }
+            }
+        });
+    }
+    
+    // Запуск автоматических обновлений
+    startUpdates() {
+        // Обновляем баланс каждые 30 секунд
+        this.updateInterval = setInterval(() => {
+            if (this.walletAddress) {
+                this.updateBalance();
+            }
+        }, 30000);
+    }
+    
+    // Остановка обновлений
+    stopUpdates() {
+        if (this.updateInterval) {
+            clearInterval(this.updateInterval);
+            this.updateInterval = null;
+        }
     }
     
     // Уничтожение модуля
     destroy() {
-        this.stopMonitoring();
+        this.stopUpdates();
     }
 }
 
-// Экспорт по умолчанию
-export default WalletModule;
+// Делаем модуль доступным глобально
+window.WalletModule = WalletModule;
+window.walletModule = null; // Будет инициализирован в app.js

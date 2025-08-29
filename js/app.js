@@ -94,19 +94,30 @@ class ArbiInvestApp {
     
     // Вход на сайт - теперь проверяем авторизацию
     enterSite() {
-        // Проверяем существующую авторизацию
-        if (window.authModule && window.authModule.checkExistingAuth()) {
-            // Если авторизован, сразу входим в приложение
-            this.directEnterApp();
-        } else {
-            // Если не авторизован, показываем экран авторизации
-            if (window.authModule) {
-                window.authModule.showAuthScreen();
-            } else {
-                console.error('Auth module not loaded');
-                // Fallback - входим без авторизации
+        console.log('🔐 Enter site clicked');
+        
+        // Всегда показываем экран авторизации при первом входе
+        if (window.authModule) {
+            // Проверяем существующую авторизацию
+            if (window.authModule.checkExistingAuth()) {
+                console.log('✅ User already authorized, entering app');
+                // Если уже авторизован, сразу входим
                 this.directEnterApp();
+            } else {
+                console.log('🔐 Showing auth screen');
+                // Показываем экран выбора (хомяк или рептилоид)
+                window.authModule.showAuthScreen();
             }
+        } else {
+            console.error('❌ Auth module not loaded!');
+            // Попробуем загрузить модуль
+            setTimeout(() => {
+                if (window.authModule) {
+                    window.authModule.showAuthScreen();
+                } else {
+                    alert('Ошибка загрузки модуля авторизации. Перезагрузите страницу.');
+                }
+            }, 1000);
         }
     }
     
@@ -175,11 +186,13 @@ class ArbiInvestApp {
             
             if (typeof WalletModule !== 'undefined') {
                 this.modules.wallet = new WalletModule(this);
+                window.walletModule = this.modules.wallet;
                 await this.modules.wallet.init();
             }
             
             if (typeof TransactionsModule !== 'undefined') {
                 this.modules.transactions = new TransactionsModule(this);
+                window.transactionsModule = this.modules.transactions;
                 await this.modules.transactions.init();
             }
             
@@ -410,6 +423,12 @@ class ArbiInvestApp {
     
     // Показ уведомлений
     showNotification(type, message, duration = 3000) {
+        // Используем глобальный модуль уведомлений если он доступен
+        if (window.notifications) {
+            return window.notifications.show(type, message, { duration });
+        }
+        
+        // Fallback на встроенную реализацию
         const container = document.getElementById('notificationContainer') || this.createNotificationContainer();
         
         const notification = document.createElement('div');
@@ -479,6 +498,17 @@ class ArbiInvestApp {
 
 // Инициализация приложения при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('🚀 DOMContentLoaded - initializing app');
+    
+    // Инициализируем модуль авторизации если он загружен
+    if (window.authModule && window.authModule.init) {
+        console.log('🔐 Initializing auth module');
+        window.authModule.init();
+    } else {
+        console.warn('⚠️ Auth module not found or not loaded');
+    }
+    
+    // Создаем и инициализируем основное приложение
     window.app = new ArbiInvestApp();
     window.app.init();
 });

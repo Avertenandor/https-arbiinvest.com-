@@ -1,383 +1,222 @@
 // ========================================
-// ArbiInvest - Менеджер хранилища
+// ArbiInvest - Модуль хранения данных
 // ========================================
 
-export class StorageManager {
-    constructor() {
-        this.prefix = 'arbi_';
-        this.storage = window.localStorage;
-        this.sessionStorage = window.sessionStorage;
-        this.cache = new Map();
-        this.init();
-    }
+window.StorageModule = {
+    // Префикс для всех ключей
+    prefix: 'arbiinvest_',
     
-    init() {
-        // Проверяем доступность localStorage
-        this.isAvailable = this.checkAvailability();
-        
-        // Загружаем кэш
-        this.loadCache();
-        
-        // Очищаем устаревшие данные
-        this.cleanup();
-    }
-    
-    // Проверка доступности localStorage
-    checkAvailability() {
+    // Сохранение данных
+    set(key, value) {
         try {
-            const test = '__localStorage_test__';
-            this.storage.setItem(test, test);
-            this.storage.removeItem(test);
+            const fullKey = this.prefix + key;
+            const data = JSON.stringify({
+                value: value,
+                timestamp: Date.now()
+            });
+            localStorage.setItem(fullKey, data);
             return true;
-        } catch (e) {
-            console.warn('localStorage недоступен:', e);
+        } catch (error) {
+            console.error('Ошибка сохранения данных:', error);
             return false;
         }
-    }
+    },
     
-    // Получение значения
+    // Получение данных
     get(key, defaultValue = null) {
-        // Проверяем кэш
-        if (this.cache.has(key)) {
-            return this.cache.get(key);
-        }
-        
-        if (!this.isAvailable) {
+        try {
+            const fullKey = this.prefix + key;
+            const data = localStorage.getItem(fullKey);
+            
+            if (!data) return defaultValue;
+            
+            const parsed = JSON.parse(data);
+            return parsed.value;
+        } catch (error) {
+            console.error('Ошибка чтения данных:', error);
             return defaultValue;
         }
-        
+    },
+    
+    // Получение данных с проверкой срока действия
+    getWithExpiry(key, defaultValue = null) {
         try {
-            const item = this.storage.getItem(this.prefix + key);
+            const fullKey = this.prefix + key;
+            const data = localStorage.getItem(fullKey);
             
-            if (item === null) {
-                return defaultValue;
-            }
+            if (!data) return defaultValue;
             
-            const data = JSON.parse(item);
+            const parsed = JSON.parse(data);
+            const now = Date.now();
             
-            // Проверяем срок действия
-            if (data.expiry && data.expiry < Date.now()) {
+            // Проверяем срок действия (24 часа)
+            if (parsed.timestamp && (now - parsed.timestamp) > 86400000) {
                 this.remove(key);
                 return defaultValue;
             }
             
-            // Сохраняем в кэш
-            this.cache.set(key, data.value);
-            
-            return data.value;
-        } catch (e) {
-            console.error('Ошибка чтения из localStorage:', e);
+            return parsed.value;
+        } catch (error) {
+            console.error('Ошибка чтения данных:', error);
             return defaultValue;
         }
-    }
+    },
     
-    // Установка значения
-    set(key, value, ttl = null) {
-        if (!this.isAvailable) {
-            return false;
-        }
-        
-        try {
-            const data = {
-                value,
-                timestamp: Date.now(),
-                expiry: ttl ? Date.now() + ttl : null
-            };
-            
-            this.storage.setItem(this.prefix + key, JSON.stringify(data));
-            
-            // Обновляем кэш
-            this.cache.set(key, value);
-            
-            return true;
-        } catch (e) {
-            console.error('Ошибка записи в localStorage:', e);
-            
-            // Пытаемся очистить место
-            if (e.name === 'QuotaExceededError') {
-                this.cleanup();
-                
-                // Повторная попытка
-                try {
-                    this.storage.setItem(this.prefix + key, JSON.stringify({ value }));
-                    return true;
-                } catch (e2) {
-                    console.error('Не удалось сохранить после очистки:', e2);
-                }
-            }
-            
-            return false;
-        }
-    }
-    
-    // Удаление значения
+    // Удаление данных
     remove(key) {
-        if (!this.isAvailable) {
-            return false;
-        }
-        
         try {
-            this.storage.removeItem(this.prefix + key);
-            this.cache.delete(key);
+            const fullKey = this.prefix + key;
+            localStorage.removeItem(fullKey);
             return true;
-        } catch (e) {
-            console.error('Ошибка удаления из localStorage:', e);
+        } catch (error) {
+            console.error('Ошибка удаления данных:', error);
             return false;
         }
-    }
+    },
+    
+    // Очистка всех данных приложения
+    clear() {
+        try {
+            const keys = Object.keys(localStorage);
+            keys.forEach(key => {
+                if (key.startsWith(this.prefix)) {
+                    localStorage.removeItem(key);
+                }
+            });
+            return true;
+        } catch (error) {
+            console.error('Ошибка очистки данных:', error);
+            return false;
+        }
+    },
     
     // Проверка существования ключа
     has(key) {
-        if (this.cache.has(key)) {
-            return true;
-        }
-        
-        if (!this.isAvailable) {
-            return false;
-        }
-        
-        return this.storage.getItem(this.prefix + key) !== null;
-    }
+        const fullKey = this.prefix + key;
+        return localStorage.getItem(fullKey) !== null;
+    },
     
-    // Очистка всех данных
-    clear() {
-        if (!this.isAvailable) {
-            return false;
-        }
-        
-        try {
-            // Удаляем только наши ключи
-            const keys = Object.keys(this.storage);
-            keys.forEach(key => {
-                if (key.startsWith(this.prefix)) {
-                    this.storage.removeItem(key);
-                }
-            });
-            
-            this.cache.clear();
-            return true;
-        } catch (e) {
-            console.error('Ошибка очистки localStorage:', e);
-            return false;
-        }
-    }
-    
-    // Получение всех ключей
-    keys() {
-        if (!this.isAvailable) {
-            return [];
-        }
-        
+    // Получение всех ключей приложения
+    getAllKeys() {
         const keys = [];
-        const storageKeys = Object.keys(this.storage);
+        const allKeys = Object.keys(localStorage);
         
-        storageKeys.forEach(key => {
+        allKeys.forEach(key => {
             if (key.startsWith(this.prefix)) {
                 keys.push(key.replace(this.prefix, ''));
             }
         });
         
         return keys;
-    }
+    },
     
     // Получение размера хранилища
     getSize() {
-        if (!this.isAvailable) {
-            return 0;
-        }
-        
         let size = 0;
-        const keys = Object.keys(this.storage);
+        const keys = Object.keys(localStorage);
         
         keys.forEach(key => {
             if (key.startsWith(this.prefix)) {
-                size += this.storage.getItem(key).length + key.length;
+                size += localStorage.getItem(key).length;
             }
         });
         
         return size;
-    }
+    },
     
-    // Получение размера в удобном формате
-    getFormattedSize() {
-        const bytes = this.getSize();
-        
-        if (bytes < 1024) {
-            return bytes + ' B';
-        } else if (bytes < 1024 * 1024) {
-            return (bytes / 1024).toFixed(2) + ' KB';
-        } else {
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-    }
+    // Сохранение настроек
+    saveSettings(settings) {
+        return this.set('settings', settings);
+    },
     
-    // Очистка устаревших данных
-    cleanup() {
-        if (!this.isAvailable) {
-            return;
-        }
-        
-        const now = Date.now();
-        const keys = this.keys();
-        
-        keys.forEach(key => {
-            try {
-                const item = this.storage.getItem(this.prefix + key);
-                if (item) {
-                    const data = JSON.parse(item);
-                    
-                    // Удаляем устаревшие данные
-                    if (data.expiry && data.expiry < now) {
-                        this.remove(key);
-                    }
-                    
-                    // Удаляем очень старые данные (больше 30 дней)
-                    if (data.timestamp && now - data.timestamp > 30 * 24 * 60 * 60 * 1000) {
-                        this.remove(key);
-                    }
-                }
-            } catch (e) {
-                // Удаляем поврежденные данные
-                this.remove(key);
-            }
+    // Загрузка настроек
+    loadSettings() {
+        return this.get('settings', {
+            theme: 'dark',
+            language: 'ru',
+            notifications: true,
+            autoRefresh: true,
+            refreshInterval: 30000,
+            soundEnabled: false,
+            compactView: false
         });
-    }
+    },
     
-    // Загрузка кэша
-    loadCache() {
-        // Загружаем часто используемые данные в кэш
-        const importantKeys = [
-            'walletAddress',
-            'networkId',
-            'theme',
-            'language',
-            'settings'
-        ];
+    // Сохранение кошелька
+    saveWallet(address) {
+        return this.set('robot_wallet', address);
+    },
+    
+    // Загрузка кошелька
+    loadWallet() {
+        return this.get('robot_wallet', null);
+    },
+    
+    // Кэширование данных API
+    cacheApiData(endpoint, data, ttl = 300000) { // 5 минут по умолчанию
+        const cacheData = {
+            data: data,
+            expiry: Date.now() + ttl
+        };
+        return this.set(`cache_${endpoint}`, cacheData);
+    },
+    
+    // Получение кэшированных данных API
+    getCachedApiData(endpoint) {
+        const cached = this.get(`cache_${endpoint}`, null);
         
-        importantKeys.forEach(key => {
-            const value = this.get(key);
-            if (value !== null) {
-                this.cache.set(key, value);
-            }
-        });
-    }
-    
-    // Сохранение в сессионное хранилище
-    setSession(key, value) {
-        if (!this.sessionStorage) {
-            return false;
-        }
+        if (!cached) return null;
         
-        try {
-            this.sessionStorage.setItem(this.prefix + key, JSON.stringify(value));
-            return true;
-        } catch (e) {
-            console.error('Ошибка записи в sessionStorage:', e);
-            return false;
-        }
-    }
-    
-    // Получение из сессионного хранилища
-    getSession(key, defaultValue = null) {
-        if (!this.sessionStorage) {
-            return defaultValue;
+        if (Date.now() > cached.expiry) {
+            this.remove(`cache_${endpoint}`);
+            return null;
         }
         
-        try {
-            const item = this.sessionStorage.getItem(this.prefix + key);
-            return item ? JSON.parse(item) : defaultValue;
-        } catch (e) {
-            console.error('Ошибка чтения из sessionStorage:', e);
-            return defaultValue;
-        }
-    }
+        return cached.data;
+    },
     
-    // Удаление из сессионного хранилища
-    removeSession(key) {
-        if (!this.sessionStorage) {
-            return false;
-        }
-        
-        try {
-            this.sessionStorage.removeItem(this.prefix + key);
-            return true;
-        } catch (e) {
-            console.error('Ошибка удаления из sessionStorage:', e);
-            return false;
-        }
-    }
+    // Сохранение истории транзакций
+    saveTransactionHistory(transactions) {
+        return this.set('transaction_history', transactions);
+    },
+    
+    // Загрузка истории транзакций
+    loadTransactionHistory() {
+        return this.get('transaction_history', []);
+    },
     
     // Экспорт всех данных
-    export() {
+    exportData() {
         const data = {};
-        const keys = this.keys();
+        const keys = this.getAllKeys();
         
         keys.forEach(key => {
             data[key] = this.get(key);
         });
         
-        return data;
-    }
+        return {
+            version: '1.0.0',
+            timestamp: Date.now(),
+            data: data
+        };
+    },
     
     // Импорт данных
-    import(data) {
-        Object.entries(data).forEach(([key, value]) => {
-            this.set(key, value);
-        });
-    }
-    
-    // Создание резервной копии
-    backup() {
-        const data = this.export();
-        const blob = new Blob([JSON.stringify(data, null, 2)], {
-            type: 'application/json'
-        });
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `arbiinvest_backup_${Date.now()}.json`;
-        a.click();
-        
-        URL.revokeObjectURL(url);
-    }
-    
-    // Восстановление из резервной копии
-    restore(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
+    importData(exportedData) {
+        try {
+            if (!exportedData.data) return false;
             
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    this.import(data);
-                    resolve(data);
-                } catch (error) {
-                    reject(error);
-                }
-            };
+            Object.entries(exportedData.data).forEach(([key, value]) => {
+                this.set(key, value);
+            });
             
-            reader.onerror = reject;
-            reader.readAsText(file);
-        });
+            return true;
+        } catch (error) {
+            console.error('Ошибка импорта данных:', error);
+            return false;
+        }
     }
-    
-    // Подписка на изменения
-    subscribe(key, callback) {
-        window.addEventListener('storage', (e) => {
-            if (e.key === this.prefix + key) {
-                const newValue = e.newValue ? JSON.parse(e.newValue).value : null;
-                const oldValue = e.oldValue ? JSON.parse(e.oldValue).value : null;
-                callback(newValue, oldValue);
-            }
-        });
-    }
-    
-    // Уничтожение менеджера
-    destroy() {
-        this.cache.clear();
-    }
-}
+};
 
-// Экспорт по умолчанию
-export default StorageManager;
+// Делаем модуль доступным глобально
+window.storage = window.StorageModule;

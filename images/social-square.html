@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ArbiInvest Square Preview</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            width: 512px;
+            height: 512px;
+            background: radial-gradient(circle at center, #1a1a1a 0%, #0f0f0f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            position: relative;
+            overflow: hidden;
+        }
+        .animated-bg {
+            position: absolute;
+            width: 200%;
+            height: 200%;
+            top: -50%;
+            left: -50%;
+            background: conic-gradient(from 0deg at 50% 50%, 
+                transparent 0deg,
+                rgba(99, 102, 241, 0.1) 60deg,
+                transparent 120deg,
+                rgba(16, 185, 129, 0.1) 180deg,
+                transparent 240deg,
+                rgba(139, 92, 246, 0.1) 300deg,
+                transparent 360deg);
+            animation: rotate 20s linear infinite;
+        }
+        @keyframes rotate {
+            to { transform: rotate(360deg); }
+        }
+        .content {
+            position: relative;
+            text-align: center;
+            z-index: 10;
+            background: rgba(26, 26, 26, 0.9);
+            padding: 60px;
+            border-radius: 30px;
+            backdrop-filter: blur(20px);
+            border: 2px solid rgba(99, 102, 241, 0.3);
+            box-shadow: 
+                0 0 100px rgba(99, 102, 241, 0.2),
+                inset 0 0 50px rgba(99, 102, 241, 0.05);
+        }
+        .logo {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 30px;
+            position: relative;
+            filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.5));
+        }
+        .logo svg {
+            width: 100%;
+            height: 100%;
+        }
+        h1 {
+            color: #ffffff;
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 0 30px rgba(99, 102, 241, 0.8);
+            letter-spacing: -1px;
+        }
+        .subtitle {
+            color: #10b981;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .live-indicator {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+            }
+        }
+        .live-text {
+            color: #10b981;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(99, 102, 241, 0.6);
+            border-radius: 50%;
+            animation: float-up 10s linear infinite;
+        }
+        @keyframes float-up {
+            from {
+                transform: translateY(512px) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            to {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0;
+            }
+        }
+        .particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+        .particle:nth-child(2) { left: 20%; animation-delay: 1s; }
+        .particle:nth-child(3) { left: 30%; animation-delay: 2s; }
+        .particle:nth-child(4) { left: 40%; animation-delay: 3s; }
+        .particle:nth-child(5) { left: 50%; animation-delay: 4s; }
+        .particle:nth-child(6) { left: 60%; animation-delay: 5s; }
+        .particle:nth-child(7) { left: 70%; animation-delay: 6s; }
+        .particle:nth-child(8) { left: 80%; animation-delay: 7s; }
+        .particle:nth-child(9) { left: 90%; animation-delay: 8s; }
+        .particle:nth-child(10) { left: 95%; animation-delay: 9s; }
+    </style>
+</head>
+<body>
+    <div class="animated-bg"></div>
+    <div class="particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+    <div class="live-indicator">
+        <div class="live-dot"></div>
+        <div class="live-text">LIVE</div>
+    </div>
+    <div class="content">
+        <div class="logo">
+            <svg viewBox="0 0 140 140" fill="none">
+                <circle cx="70" cy="70" r="65" stroke="url(#grad1)" stroke-width="3" opacity="0.3"/>
+                <circle cx="70" cy="70" r="50" stroke="url(#grad1)" stroke-width="2" opacity="0.5"/>
+                <circle cx="70" cy="70" r="35" stroke="url(#grad1)" stroke-width="1" opacity="0.7"/>
+                
+                <path d="M70 25 L70 115 M25 70 L115 70" stroke="url(#grad2)" stroke-width="5" stroke-linecap="round"/>
+                
+                <circle cx="70" cy="70" r="15" fill="url(#grad2)"/>
+                
+                <circle cx="70" cy="30" r="6" fill="#10b981"/>
+                <circle cx="110" cy="70" r="6" fill="#10b981"/>
+                <circle cx="70" cy="110" r="6" fill="#10b981"/>
+                <circle cx="30" cy="70" r="6" fill="#10b981"/>
+                
+                <defs>
+                    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                    </linearGradient>
+                    <radialGradient id="grad2">
+                        <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        <stop offset="100%" style="stop-color:#6366f1;stop-opacity:1" />
+                    </radialGradient>
+                </defs>
+            </svg>
+        </div>
+        <h1>ArbiInvest</h1>
+        <div class="subtitle">Arbitrage Robot</div>
+    </div>
+</body>
+</html>
