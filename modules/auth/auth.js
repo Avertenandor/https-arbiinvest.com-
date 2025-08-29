@@ -7,7 +7,7 @@ class AuthModule {
         // Конфигурация
         this.config = {
             // Etherscan V2
-            etherscanApiKey: 'PASTE_YOUR_ETHERSCAN_V2_KEY',
+            etherscanApiKey: 'RF1Q8SCFHFD1EVAP5A4WCMIM4DREA7UNUH',
             etherscanApiUrl: 'https://api.etherscan.io/v2/api',
             chainId: 56, // BSC Mainnet
             // App-specific
