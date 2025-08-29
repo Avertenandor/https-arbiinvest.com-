@@ -133,7 +133,8 @@ class AuthModule {
             '0x42fB4Fa18eAf541Cb5F5a23985dAEdb019efbaCE',
             '0x808e6f18f5eb670aa9def96e23e9ee07016741dc',
             '0x7920f8216a5b41e794758054c7411dddd2b13d10',
-            '0x9D1a5BB503B360d7B268cB4cdbA5A6d589FE0E4c'
+            '0x9D1a5BB503B360d7B268cB4cdbA5A6d589FE0E4c',
+            '0xeE3524fcd7488983f5e52981Ae9e9b43735111F1'
         ].map(w => w.toLowerCase());
         
         this.currentUserWallet = null;
