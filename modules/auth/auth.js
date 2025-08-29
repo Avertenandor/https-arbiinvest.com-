@@ -773,23 +773,30 @@ class AuthModule {
         });
     }
     
-    // Генерация QR-кода с использованием реальной библиотеки
+    // Генерация QR-кода
     generateQRCode(address) {
-        // Проверяем, загружена ли библиотека QRCode
+        const qrContainer = document.getElementById('qr-canvas');
+        if (!qrContainer) return;
+        
+        // Очищаем контейнер
+        qrContainer.innerHTML = '';
+        
+        // Проверяем, загружена ли библиотека QRCode через CDN
         if (typeof QRCode === 'undefined') {
-            // Если библиотека не загружена, загружаем её динамически
+            // Если библиотека не загружена, загружаем её динамически с CDN
             const script = document.createElement('script');
-            script.src = '/lib/qrcode.min.js';
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js';
             script.onload = () => {
                 this.createQRCode(address);
             };
             script.onerror = () => {
-                console.error('Failed to load QRCode library');
+                console.error('Failed to load QRCode library from CDN');
                 // Используем альтернативный метод генерации QR-кода
                 this.createAlternativeQR(address);
             };
             document.head.appendChild(script);
         } else {
+            // Если библиотека уже загружена, сразу создаём QR-код
             this.createQRCode(address);
         }
     }
@@ -799,38 +806,48 @@ class AuthModule {
         const qrContainer = document.getElementById('qr-canvas');
         if (!qrContainer) return;
         
-        // Очищаем контейнер
+        // Очищаем контейнер перед созданием нового QR-кода
         qrContainer.innerHTML = '';
         
-        // Создаём новый QR-код
         try {
-            new QRCode(qrContainer, {
+            // Создаём div для QR-кода
+            const qrDiv = document.createElement('div');
+            qrContainer.appendChild(qrDiv);
+            
+            // Создаём QR-код
+            new QRCode(qrDiv, {
                 text: address,
                 width: 200,
                 height: 200,
                 colorDark: '#000000',
                 colorLight: '#ffffff',
-                correctLevel: QRCode.CorrectLevel.H
+                correctLevel: QRCode.CorrectLevel ? QRCode.CorrectLevel.M : 0
             });
+            
+            console.log('✅ QR code created successfully');
         } catch (error) {
             console.error('Error creating QR code:', error);
+            // Если ошибка, используем альтернативный метод
             this.createAlternativeQR(address);
         }
     }
     
-    // Альтернативный метод создания QR-кода (для резервного варианта)
+    // Альтернативный метод создания QR-кода (через API)
     createAlternativeQR(address) {
         const qrContainer = document.getElementById('qr-canvas');
         if (!qrContainer) return;
         
+        console.log('Using alternative QR code generation method');
+        
         // Используем внешний сервис для генерации QR-кода
-        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address)}`;
+        const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(address)}&bgcolor=ffffff&color=000000&margin=1`;
         
         qrContainer.innerHTML = `
             <img src="${qrApiUrl}" 
                  alt="QR Code" 
-                 style="display: block; width: 200px; height: 200px; background: white; padding: 10px; border-radius: 8px;"
-                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center;\'>QR-код временно недоступен</div>'">
+                 style="display: block; width: 200px; height: 200px; border-radius: 8px;"
+                 onload="console.log('✅ QR code loaded from API')"
+                 onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding: 20px; background: #f3f4f6; border-radius: 8px; text-align: center; color: #666;\'>QR-код временно недоступен<br><small>Скопируйте адрес вручную</small></div>'">
         `;
     }
     

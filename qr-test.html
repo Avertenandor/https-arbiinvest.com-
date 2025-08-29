@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Test</title>
+    <style>
+        body {
+            background: #1a1a1a;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: #2a2a2a;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        h1 {
+            margin-bottom: 2rem;
+        }
+        .qr-box {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        button {
+            padding: 12px 24px;
+            margin: 10px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(99, 102, 241, 0.4);
+        }
+        .address {
+            margin: 20px 0;
+            padding: 15px;
+            background: #333;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .status {
+            margin: 15px 0;
+            padding: 10px;
+            border-radius: 6px;
+        }
+        .status.success {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Тест генерации QR-кода</h1>
+        
+        <div class="address">
+            Адрес: 0x28915a33562b58500cf8b5b682C89A3396B8Af76
+        </div>
+        
+        <div id="qr-test" class="qr-box">
+            <!-- QR код появится здесь -->
+        </div>
+        
+        <div>
+            <button onclick="generateWithLibrary()">Сгенерировать через библиотеку</button>
+            <button onclick="generateWithAPI()">Сгенерировать через API</button>
+            <button onclick="clearQR()">Очистить</button>
+        </div>
+        
+        <div id="status" class="status" style="display: none;"></div>
+    </div>
+
+    <!-- Загружаем библиотеку QRCode с CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
+    <script>
+        const testAddress = '0x28915a33562b58500cf8b5b682C89A3396B8Af76';
+        
+        function showStatus(message, type = 'success') {
+            const status = document.getElementById('status');
+            status.style.display = 'block';
+            status.className = `status ${type}`;
+            status.textContent = message;
+            
+            setTimeout(() => {
+                status.style.display = 'none';
+            }, 3000);
+        }
+        
+        function clearQR() {
+            const container = document.getElementById('qr-test');
+            container.innerHTML = '';
+            showStatus('QR-код очищен');
+        }
+        
+        function generateWithLibrary() {
+            const container = document.getElementById('qr-test');
+            container.innerHTML = '';
+            
+            try {
+                // Создаём div для QR-кода
+                const qrDiv = document.createElement('div');
+                container.appendChild(qrDiv);
+                
+                // Генерируем QR-код
+                new QRCode(qrDiv, {
+                    text: testAddress,
+                    width: 200,
+                    height: 200,
+                    colorDark: '#000000',
+                    colorLight: '#ffffff',
+                    correctLevel: QRCode.CorrectLevel.M
+                });
+                
+                showStatus('✅ QR-код успешно создан через библиотеку', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('❌ Ошибка: ' + error.message, 'error');
+            }
+        }
+        
+        function generateWithAPI() {
+            const container = document.getElementById('qr-test');
+            container.innerHTML = '';
+            
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(testAddress)}&bgcolor=ffffff&color=000000&margin=1`;
+            
+            container.innerHTML = `
+                <img src="${qrApiUrl}" 
+                     alt="QR Code" 
+                     style="display: block;"
+                     onload="showStatus('✅ QR-код успешно загружен через API', 'success')"
+                     onerror="showStatus('❌ Ошибка загрузки QR-кода', 'error')">
+            `;
+        }
+        
+        // Автоматически генерируем QR-код при загрузке страницы
+        window.onload = () => {
+            generateWithLibrary();
+        };
+    </script>
+</body>
+</html>
